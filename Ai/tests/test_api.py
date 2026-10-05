@@ -13,6 +13,7 @@ def test_health():
 
 def test_ai_endpoints_report_missing_configuration(monkeypatch):
     monkeypatch.delenv('GEMINI_API_KEY', raising=False)
+    monkeypatch.delenv('GROQ_API_KEY', raising=False)
     response = client.post('/api/generate-test', json={
         'purpose': 'Practice', 'subject': 'React', 'difficulty': 'medium',
         'testType': 'conceptual', 'timeLimit': 30,

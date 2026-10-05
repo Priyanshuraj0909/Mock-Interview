@@ -62,7 +62,9 @@ Open http://localhost:3000. The example client environment points at `http://loc
 
 | Variable | Purpose |
 | --- | --- |
-| `GEMINI_API_KEY` | Required for question generation and feedback; server only |
+| `GEMINI_API_KEY` | Primary question generation and feedback key; server only. At least one AI provider key is required. |
+| `GROQ_API_KEY` | Optional server-only key enabling fallback if Gemini is unavailable |
+| `GROQ_MODEL` | Optional Groq model override; defaults to `openai/gpt-oss-20b` |
 | `GEMINI_MODEL` | Optional model override; defaults to `gemini-3.8-flash` |
 | `MONGODB_URI` | Required for accounts; MongoDB connection string |
 | `MONGODB_DB` | Optional database name; defaults to `ai_mock_interview` |
@@ -137,3 +139,9 @@ If signup or login reports that the account database is unavailable, inspect the
 - Redeploy after changing Vercel environment variables.
 
 The API bundles `certifi` roots and keeps TLS certificate verification enabled. Database failures return HTTP 503 with a retry message, without exposing driver connection details. Atlas configuration must still allow the connection.
+
+## AI fallback
+
+Gemini is tried first. Temporary overload, rate-limit, and transport errors receive one retry after one second, with a 15-second timeout per attempt. If generation still fails, the API uses Groq when `GROQ_API_KEY` is configured. Groq has a 20-second timeout. If only Groq is configured, it is used directly. The same behavior covers mock tests, interview questions, and answer feedback.
+
+When both providers fail, the API returns a friendly HTTP 503 response with `Retry-After: 10`, and mock-test answers remain available for resubmission. Add the Groq key in Vercel environment settings and redeploy to enable failover. Provider errors and keys are never included in the response. See [Groq's API documentation](https://console.groq.com/docs/text-chat) for key setup and model use.

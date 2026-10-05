@@ -99,6 +99,8 @@ async def generate_questions(request: InterviewRequest, model = Depends(get_mode
             
         return parsed_response
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating questions: {str(e)}")
 
@@ -152,6 +154,8 @@ async def evaluate_answer(request: FeedbackRequest, model = Depends(get_model)):
                 
         return parsed_response
         
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error evaluating answer: {str(e)}")
 

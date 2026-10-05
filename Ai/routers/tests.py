@@ -67,6 +67,8 @@ def parse_questions_response(response_text):
 
         return questions[:10]  # Return max 10 questions
 
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Parse error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to parse generated questions: {str(e)}")
@@ -135,6 +137,8 @@ async def generate_test(params: TestParams, model=Depends(get_model)):
 
         return {"questions": questions}
 
+    except HTTPException:
+        raise
     except Exception as e:
         # More detailed error message
         import traceback
@@ -195,6 +199,8 @@ async def submit_answers(data: AnswerSubmission, model=Depends(get_model)):
             "questionAnalysis": answers
         }
 
+    except HTTPException:
+        raise
     except Exception as e:
         # More detailed error message
         import traceback

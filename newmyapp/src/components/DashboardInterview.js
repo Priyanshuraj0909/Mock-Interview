@@ -21,7 +21,8 @@ const interviewService = {
         });
         
         if (!response.ok) {
-          throw new Error("Failed to generate questions");
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.detail || "Failed to generate questions");
         }
         
         const data = await response.json();
@@ -42,7 +43,8 @@ const interviewService = {
     });
     
     if (!response.ok) {
-      throw new Error("Failed to evaluate answer");
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.detail || "Failed to evaluate answer");
     }
     
     return response.json();
