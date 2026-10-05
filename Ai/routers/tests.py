@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import google.generativeai as genai
 import json
 import re
@@ -9,11 +9,11 @@ router = APIRouter()
 
 # Configure Gemini Model
 def configure_genai():
-    api_key = "AIzaSyC7OtTC796NznXvrVPprSddkAq_cv0BghI"
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="API key not configured in environment variables")
+        raise HTTPException(status_code=503, detail="AI service is not configured. Set GEMINI_API_KEY on the server.")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-2.0-flash')
+    return genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
 
 # Dependency for getting the model
 def get_model():
@@ -24,11 +24,11 @@ class TestParams(BaseModel):
     subject: str
     difficulty: str
     testType: str
-    timeLimit: int
+    timeLimit: int = Field(ge=1, le=180)
 
 class AnswerSubmission(BaseModel):
     testParams: TestParams
-    questions: list
+    questions: list = Field(min_length=1, max_length=50)
     answers: dict
 
 def parse_questions_response(response_text):

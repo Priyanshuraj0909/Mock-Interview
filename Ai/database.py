@@ -1,6 +1,7 @@
 import os
 from typing import Optional
 
+from fastapi import HTTPException
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.errors import PyMongoError
@@ -18,7 +19,7 @@ _client_holder = _MongoClientHolder()
 
 def _build_client() -> AsyncIOMotorClient:
     uri = os.getenv("MONGODB_URI") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
-    return AsyncIOMotorClient(uri)
+    return AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
 
 
 def get_client() -> AsyncIOMotorClient:
@@ -32,6 +33,8 @@ def get_database_name() -> str:
 
 
 async def get_database():
+    if not (os.getenv("MONGODB_URI") or os.getenv("MONGO_URL")):
+        raise HTTPException(status_code=503, detail="Accounts are not configured. Set MONGODB_URI on the server.")
     return get_client()[get_database_name()]
 
 

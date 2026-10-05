@@ -34,7 +34,7 @@ const Login = () => {
                 navigate('/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'An error occurred during login');
+            setError(err.response?.data?.message || err.response?.data?.detail || 'An error occurred during login');
         } finally {
             setLoading(false);
         }

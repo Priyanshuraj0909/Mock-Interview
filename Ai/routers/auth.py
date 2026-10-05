@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import os
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from jose import jwt
 from passlib.context import CryptContext
@@ -14,7 +14,7 @@ from database import get_database
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me")
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
 
@@ -23,7 +23,7 @@ class SignupRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     purpose: str = Field(..., min_length=1, max_length=100)
-    password: str = Field(..., min_length=8, max_length=128)
+    password: str = Field(..., min_length=8, max_length=72)
 
 
 class LoginRequest(BaseModel):
@@ -32,6 +32,8 @@ class LoginRequest(BaseModel):
 
 
 def _create_access_token(data: Dict[str, Any]) -> str:
+    if not SECRET_KEY or len(SECRET_KEY) < 32:
+        raise HTTPException(status_code=503, detail="Authentication is not configured. Set a JWT_SECRET_KEY of at least 32 characters.")
     to_encode = data.copy()
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
@@ -49,6 +51,8 @@ def _serialize_user(user: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.post("/signup")
 async def signup(payload: SignupRequest, db=Depends(get_database)):
+    if not SECRET_KEY or len(SECRET_KEY) < 32:
+        raise HTTPException(status_code=503, detail="Authentication is not configured on the server.")
     users_collection = db["users"]
     normalized_email = payload.email.lower()
 
@@ -83,6 +87,8 @@ async def signup(payload: SignupRequest, db=Depends(get_database)):
 
 @router.post("/login")
 async def login(payload: LoginRequest, db=Depends(get_database)):
+    if not SECRET_KEY or len(SECRET_KEY) < 32:
+        raise HTTPException(status_code=503, detail="Authentication is not configured on the server.")
     users_collection = db["users"]
     normalized_email = payload.email.lower()
 

@@ -62,7 +62,7 @@ const Signup = () => {
       // Typically you would handle the successful signup here (e.g., redirect)
     } catch (error) {
       setIsError(true);
-      setMessage(error.response?.data?.message || 'Signup failed. Please try again.');
+      setMessage(error.response?.data?.message || error.response?.data?.detail || 'Signup failed. Please try again.');
     }
   };
 
@@ -166,6 +166,8 @@ const Signup = () => {
                 darkMode ? 'focus:ring-blue-500' : 'focus:ring-blue-600'
               }`}
               placeholder="********"
+              minLength={8}
+              maxLength={72}
               required
             />
             <p className={`mt-1 text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>

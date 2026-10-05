@@ -2,7 +2,9 @@ import React from "react";
 import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 
-const API_BASE_URL = "http://localhost:8000/api/interview";
+import { API_BASE_URL as BASE_URL } from "../services/api";
+
+const API_BASE_URL = `${BASE_URL}/interview`;
 
 const interviewService = {
     generateQuestions: async (interviewType, jobDescription = "", difficultyLevel = 3) => {
@@ -74,6 +76,7 @@ export default function DashboardInterview() {
 
   // Initialize speech recognition
   useEffect(() => {
+    const synthesis = speechSynthesisRef.current;
     if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
@@ -98,7 +101,7 @@ export default function DashboardInterview() {
         setIsListening(false);
       };
     } else {
-      console.error('Speech recognition not supported');
+      setVoiceEnabled(false);
     }
     
     return () => {
@@ -106,8 +109,8 @@ export default function DashboardInterview() {
         recognitionRef.current.stop();
       }
       
-      if (speechSynthesisRef.current) {
-        speechSynthesisRef.current.cancel();
+      if (synthesis) {
+        synthesis.cancel();
       }
     };
   }, []);

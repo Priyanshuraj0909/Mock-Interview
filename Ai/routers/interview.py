@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import google.generativeai as genai
 import json
@@ -40,25 +40,27 @@ class FeedbackResponse(BaseModel):
 class InterviewRequest(BaseModel):
     interviewType: InterviewType
     jobDescription: Optional[str] = None
-    difficultyLevel: Optional[int] = 3  # 1-5 scale
+    difficultyLevel: int = Field(default=3, ge=1, le=5)  # 1-5 scale
 
 class InterviewResponse(BaseModel):
     questions: List[Question]
 
 # Configure Gemini Model
 def configure_genai():
-    api_key = os.environ.get("GEMINI_API_KEY", "AIzaSyC7OtTC796NznXvrVPprSddkAq_cv0BghI")
+    api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
-        raise HTTPException(status_code=500, detail="API key not configured in environment variables")
+        raise HTTPException(status_code=503, detail="AI service is not configured. Set GEMINI_API_KEY on the server.")
     genai.configure(api_key=api_key)
-    return genai.GenerativeModel('gemini-2.0-flash')
+    return genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
 
 # Get model instance
 def get_model():
     try:
         return configure_genai()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to initialize AI model: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=503, detail="AI service could not be initialized")
 
 # Generate interview questions
 @router.post("/generate-questions", response_model=InterviewResponse)

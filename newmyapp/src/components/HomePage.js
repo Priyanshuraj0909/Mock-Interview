@@ -12,7 +12,7 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [conversation, setConversation] = useState([]);
-  const [mousePosition, setmousePosition] = useState({ x: 0, y: 0 });
+  const mousePosition = { x: 0, y: 0 };
 
   const [time, setTime] = useState(new Date());
 
@@ -39,7 +39,7 @@ export default function HomePage() {
     // Add user query to conversation
     addToConversation(
       "user",
-      `Generate a mock test for ${params.subject} at ${params.difficulty} level with ${params.questionCount} questions`
+      `Generate a mock test for ${params.subject} at ${params.difficulty} level with 10 questions`
     );
 
     // Simulate AI thinking
@@ -47,7 +47,7 @@ export default function HomePage() {
       setAiThinking(false);
       addToConversation(
         "ai",
-        `I've prepared a custom ${params.subject} mock test with ${params.questionCount} questions at ${params.difficulty} difficulty. Ready to start?`
+        `I've prepared a custom ${params.subject} mock test with 10 questions at ${params.difficulty} difficulty. Ready to start?`
       );
       setTestParams(params);
       setIsLoading(false);
@@ -55,7 +55,7 @@ export default function HomePage() {
     }, 2000);
   };
   const logout = () => {
-    localStorage.clear();
+    ["token", "user", "useremail"].forEach((key) => localStorage.removeItem(key));
     window.location.href = "/"; // Redirect to the home or login page
   };
   const handleTestComplete = (resultData) => {
@@ -73,7 +73,7 @@ export default function HomePage() {
       setAiThinking(false);
       addToConversation(
         "ai",
-        `I've analyzed your results. You scored ${resultData.score}% with ${resultData.correct} correct answers out of ${resultData.total}. Let me provide you with detailed feedback.`
+        `I've analyzed your results. You scored ${resultData.score}% with ${resultData.correctAnswers} correct answers out of ${resultData.correctAnswers + resultData.incorrectAnswers}. Let me provide you with detailed feedback.`
       );
       setResults(resultData);
       setIsLoading(false);

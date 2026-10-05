@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { generateTest, submitAnswers } from "../services/api";
 
 const MockTest = ({ params, onComplete }) => {
@@ -11,11 +11,17 @@ const MockTest = ({ params, onComplete }) => {
   const [timerActive, setTimerActive] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const submitLock = useRef(false);
+  const [reload, setReload] = useState(0);
+
   useEffect(() => {
+    let cancelled = false;
     const fetchQuestions = async () => {
       try {
         setLoading(true);
+        setError(null);
         const response = await generateTest(params);
+        if (cancelled) return;
         if (response?.questions?.length) {
           setQuestions(response.questions);
           setAnswers(
@@ -26,30 +32,23 @@ const MockTest = ({ params, onComplete }) => {
           throw new Error("Invalid response format from server");
         }
       } catch (err) {
-        setError("Failed to generate questions. Please try again.");
+        if (!cancelled) setError(err.message || "Failed to generate questions. Please try again.");
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
     fetchQuestions();
-  }, [params]);
-
-  useEffect(() => {
-    let timer;
-    if (timerActive && timeLeft > 0) {
-      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0 && timerActive) {
-      handleSubmit();
-    }
-    return () => clearInterval(timer);
-  }, [timeLeft, timerActive]);
+    return () => { cancelled = true; };
+  }, [params, reload]);
 
   const handleAnswerSelect = (questionId, answer) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answer }));
   };
 
-  const handleSubmit = async () => {
-    if (submitting) return;
+  const handleSubmit = useCallback(async () => {
+    if (submitLock.current) return;
+    submitLock.current = true;
+    setError(null);
     setSubmitting(true);
     setTimerActive(false);
     try {
@@ -61,14 +60,26 @@ const MockTest = ({ params, onComplete }) => {
       if (result) onComplete(result);
       else throw new Error("No result returned from server");
     } catch (err) {
-      setError("Failed to submit answers. Please try again.");
+      setError(err.message || "Failed to submit answers. Please try again.");
+    } finally {
+      submitLock.current = false;
+      setSubmitting(false);
     }
-  };
+  }, [params, questions, answers, onComplete]);
+
+  useEffect(() => {
+    let timer;
+    if (timerActive && timeLeft > 0) {
+      timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    } else if (timeLeft === 0 && timerActive) {
+      handleSubmit();
+    }
+    return () => clearInterval(timer);
+  }, [timeLeft, timerActive, handleSubmit]);
 
   const formatTime = (seconds) =>
     `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-  const isAnswered = (id) => answers[id]?.trim();
 
   if (loading)
     return (
@@ -79,7 +90,7 @@ const MockTest = ({ params, onComplete }) => {
         </div>
       </div>
     );
-  if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
+  if (error && !questions.length) return <div className="p-6 text-center"><p role="alert" className="text-red-400">{error}</p><button className="mt-4 px-4 py-2 rounded bg-blue-600 text-white" onClick={() => setReload((value) => value + 1)}>Try again</button></div>;
   if (!questions.length)
     return <div className="p-6 text-center">No questions available.</div>;
 
@@ -87,6 +98,7 @@ const MockTest = ({ params, onComplete }) => {
 
   return (
     <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-2xl mx-auto">
+      {error && <div role="alert" className="mb-4 p-3 bg-red-950 text-red-200 rounded"><p>{error}</p><button className="underline mt-2" disabled={submitting} onClick={handleSubmit}>Retry submission</button></div>}
       <div className="flex justify-between text-gray-300 mb-4">
         <span>
           Question {currentQuestion + 1} of {questions.length}
@@ -101,9 +113,12 @@ const MockTest = ({ params, onComplete }) => {
       {question.options?.length ? (
         <div className="space-y-3">
           {question.options.map((opt, idx) => (
-            <div
+            <button
+              type="button"
+              aria-pressed={answers[question.id] === opt}
+              disabled={submitting || timeLeft === 0}
               key={idx}
-              className={`p-3 rounded-md cursor-pointer transition-colors border ${
+              className={`w-full text-left p-3 rounded-md cursor-pointer transition-colors border ${
                 answers[question.id] === opt
                   ? "bg-blue-600 border-blue-400"
                   : "bg-gray-700 border-gray-600 hover:bg-gray-600"
@@ -124,13 +139,15 @@ const MockTest = ({ params, onComplete }) => {
                 </div>
                 <span className="text-white">{opt}</span>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       ) : (
         <textarea
           className="w-full bg-gray-700 p-3 rounded-md text-white border border-gray-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
           placeholder="Type your answer..."
+          aria-label="Your answer"
+          disabled={submitting || timeLeft === 0}
           rows={4}
           value={answers[question.id]}
           onChange={(e) => handleAnswerSelect(question.id, e.target.value)}

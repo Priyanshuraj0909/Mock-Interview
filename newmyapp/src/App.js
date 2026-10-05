@@ -6,8 +6,7 @@ import Login from "./components/Login";
 import Signup from "./components/SignUp";
 import DashboardInterview from "./components/DashboardInterview";
 
-function App() {
-  const router = createBrowserRouter([
+const router = createBrowserRouter([
     {
       path: "/",
       element: (
@@ -50,6 +49,7 @@ function App() {
     },
   ]);
 
+function App() {
   return (
     <>
       <RouterProvider router={router} />

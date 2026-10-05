@@ -3,7 +3,6 @@ uvicorn
 python-dotenv
 google-generativeai
 pydantic
-cors
 motor
 passlib[bcrypt]
 bcrypt<4

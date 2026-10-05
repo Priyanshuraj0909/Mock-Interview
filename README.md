@@ -1,129 +1,128 @@
-# AI Mock Interview Platform
+# Mock Interview
 
-An end-to-end mock interview and assessment platform that combines a FastAPI backend with a React frontend. It lets learners generate tailored mock tests, simulate live technical interviews, and receive AI-powered feedback backed by Google Gemini. MongoDB stores user accounts and JWT-secured sessions, while the browser UI offers chat-like guidance, dashboards, and optional voice interaction.
+Practice technical interviews and timed mock tests with a React interface and a FastAPI API. Choose your subject or engineering role, answer questions, and review feedback generated with Google Gemini.
 
-## Repository Layout
+**Live site:** https://mock-interview-king-09.vercel.app
 
-- `Ai/`: FastAPI service that manages authentication, question generation, answer evaluation, and persistence.
-- `newmyapp/`: React single-page application that drives onboarding, test-taking, interview simulations, and visual feedback.
+## Features
 
-## Core Features
+- Responsive landing page with direct access to mock tests and the interview studio.
+- Ten-question mock tests configured by subject, purpose, difficulty, type, and time limit.
+- Role-specific interview questions, optional job descriptions, typed answers, and browser voice tools.
+- Answer feedback, score breakdowns, and another-test workflow.
+- MongoDB-backed signup and login with bcrypt password hashing and JWT issuance.
+- Retry failed question generation and submissions without losing selected answers.
+- Same-origin API routing and client-side route refresh support on Vercel.
 
-- AI-generated mock tests customized by subject, purpose, difficulty, and time limit.
-- Conversational onboarding that walks users from intent capture to test execution and analysis.
-- Voice-enabled interview simulator with timed prompts, speech synthesis, and speech-to-text capture.
-- Real-time performance dashboards, detailed feedback, and improvement recommendations.
-- Secure signup/login workflows with hashed passwords and JWT authentication.
-- MongoDB persistence with unique email enforcement and reusable connection pooling.
+## Project layout
 
-## Technology Stack
+| Path | Purpose |
+| --- | --- |
+| `newmyapp/` | React 19 client, React Router, Tailwind CSS |
+| `Ai/` | FastAPI application, MongoDB access, auth and Gemini routers |
+| `api/index.py` | Vercel entrypoint for the existing API |
+| `vercel.json` | React build, Python function, and SPA routing |
+| `Ai/tests/` | API configuration and validation regression tests |
 
-- **Frontend:** React 19, React Router, Tailwind CSS, Framer Motion, Azure Communication UI components, Web Speech APIs.
-- **Backend:** FastAPI, Uvicorn, Pydantic, Motor (MongoDB async driver), Passlib, python-jose.
-- **AI Services:** Google Gemini `gemini-2.0-flash` model for generating questions and qualitative feedback.
-- **Database:** MongoDB Atlas or self-hosted MongoDB instance.
+## Local setup
 
-## Prerequisites
+Use Node.js 22 and Python 3.12 for a deployment-compatible environment. A MongoDB connection and Gemini API key are required for accounts and AI features respectively.
 
-- Node.js 18+ and npm 9+ (for the React client).
-- Python 3.10+ (for FastAPI service) with a virtual environment tool such as `venv` or `conda`.
-- Access to a MongoDB database.
-- A Google Gemini API key (see [Google AI Studio](https://ai.google.dev/)).
+### API
 
-## Backend Setup (`Ai/`)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+# Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp Ai/.env.example Ai/.env
+```
+
+Fill in `Ai/.env`, then start from the API directory:
 
 ```bash
 cd Ai
-python -m venv venv
-.\venv\Scripts\activate  # Windows PowerShell
-pip install -r requirements.txt
-```
-
-Create an `.env` file (or update the provided sample) with secure values:
-
-```dotenv
-GEMINI_API_KEY=<your-google-gemini-api-key>
-MONGODB_URI=<mongodb-connection-string>
-MONGODB_DB=ai_mock_interview
-JWT_SECRET_KEY=<long-random-secret>
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-```
-
-Run the API locally:
-
-```bash
 uvicorn main:app --reload --port 8000
 ```
 
-Key endpoints:
+### Client
 
-| Method | Path                               | Description                                  |
-| ------ | ---------------------------------- | -------------------------------------------- |
-| GET    | `/`                                | Health probe for the FastAPI service.        |
-| POST   | `/api/auth/signup`                 | Register a new user; returns JWT and profile |
-| POST   | `/api/auth/login`                  | Authenticate user credentials                |
-| POST   | `/api/generate-test`               | Generate a personalized mock test            |
-| POST   | `/api/submit-answers`              | Score answers and produce AI feedback        |
-| GET    | `/api/test`                        | Lightweight API sanity check                 |
-| POST   | `/api/interview/generate-questions`| Produce role-specific interview questions    |
-| POST   | `/api/interview/evaluate-answer`   | Evaluate a single interview answer           |
-| GET    | `/api/interview/health`            | Interview module status                      |
-
-> **Security note:** Do not commit `.env` files or plaintext credentials. Rotate the default API keys baked into source files before deploying.
-
-## Frontend Setup (`newmyapp/`)
+In another terminal:
 
 ```bash
 cd newmyapp
-npm install
-```
-
-Create `newmyapp/.env` to point at the API gateway:
-
-```dotenv
-REACT_APP_API_BASE_URL=http://localhost:8000/api
-```
-
-Start the development server:
-
-```bash
+npm ci --legacy-peer-deps
+cp .env.example .env
 npm start
 ```
 
-The app runs on `http://localhost:3000` by default and will proxy API calls to the backend.
+Open http://localhost:3000. The example client environment points at `http://localhost:8000/api`. When no override is set, the client uses `/api` on its own origin, as it does in production.
 
-### Frontend Highlights
+## Server configuration
 
-- **Welcome & Auth:** Animated landing page, custom login/signup flows, and persistent JWT storage.
-- **Mock Test Dashboard:** Dynamic gradients, AI chat panel, test timeline, and parameter-driven test sessions.
-- **Results Reporting:** Score breakdowns, qualitative feedback, and restart loops to keep iterating.
-- **Interview Studio:** Role selector, optional job description context, adjustable difficulty, and live voice guidance with browser speech APIs.
+| Variable | Purpose |
+| --- | --- |
+| `GEMINI_API_KEY` | Required for question generation and feedback; server only |
+| `GEMINI_MODEL` | Optional model override; defaults to `gemini-2.5-flash` |
+| `MONGODB_URI` | Required for accounts; MongoDB connection string |
+| `MONGODB_DB` | Optional database name; defaults to `ai_mock_interview` |
+| `JWT_SECRET_KEY` | Required for auth; use a random secret of at least 32 characters |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime; defaults to 60 minutes |
+| `CORS_ORIGINS` | Comma-separated allowed origins; defaults to localhost:3000 |
 
-## Development Tips
+Generate a JWT secret with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Store it in environment settings, never in Git. A production JWT secret was provisioned during deployment.
 
-- Adjust `API_BASE_URL` in `newmyapp/src/services/api.js` or via environment variables when targeting hosted environments.
-- The FastAPI service auto-creates a unique index on `users.email`. Ensure your MongoDB user has permissions to manage indexes.
-- Replace placeholder Gemini API keys embedded in the routers with environment references before production.
-- Consider adding rate limiting and request validation (e.g., `fastapi-limiter`) if exposing the API publicly.
+Missing AI or database configuration returns a clear HTTP 503 response. Deployment alone does not provision MongoDB or Gemini access. **AI generation and account flows remain unavailable until their server environment variables are configured.**
 
-## Testing
+The previous source contained a Gemini key. It has been removed from current code, but remains in Git history. Revoke that key and create a replacement before enabling AI features.
 
-- React components ship with `react-scripts test`; run `npm test` for unit coverage.
-- FastAPI endpoints can be exercised with tools such as `pytest` + `httpx` or `curl`/`HTTPie`. Add test fixtures for MongoDB with a test database or mocked Motor client.
+## Deployment
 
-## Deployment Notes
+The GitHub repository is linked to the `mock-interview` project on Vercel. Pushes to `main` trigger production builds. Import the repository with its root directory set to the repository root; `vercel.json` builds the client in `newmyapp` and serves the Python API under `/api`.
 
-- Package the backend with Uvicorn/Gunicorn and serve behind a reverse proxy (e.g., Nginx) with HTTPS termination.
-- For the frontend, run `npm run build` and host the static output on services like Vercel, Netlify, or any CDN-backed host.
-- Configure environment variables in your hosting provider — never hard-code secrets in the codebase.
+1. Set `GEMINI_API_KEY`, `MONGODB_URI`, and `JWT_SECRET_KEY` in Vercel project environment settings for the required environments.
+2. Ensure the MongoDB deployment permits connections from the hosting environment.
+3. Redeploy after changing environment variables.
+4. Check `/api/test`, then verify signup, login, question generation, and submission.
 
-## Roadmap Ideas
+`REACT_APP_API_BASE_URL` is needed only when hosting the API on a different origin. It is embedded at build time and must never contain a secret.
 
-- Add role-based permissions for administrators and coaches.
-- Introduce analytics for answer difficulty trends and cohort insights.
-- Store AI-generated interview transcripts for later review.
-- Implement end-to-end tests that stitch together the React flows and API.
+## API routes
 
-## License
+| Method | Route | Purpose |
+| --- | --- | --- |
+| GET | `/api/test` | API health check |
+| POST | `/api/auth/signup` | Create an account |
+| POST | `/api/auth/login` | Issue a login token |
+| POST | `/api/generate-test` | Generate ten mock-test questions |
+| POST | `/api/submit-answers` | Score answers and generate feedback |
+| POST | `/api/interview/generate-questions` | Generate five role-specific prompts |
+| POST | `/api/interview/evaluate-answer` | Evaluate an interview answer |
+| GET | `/api/interview/health` | Interview module status |
 
-Specify a license (e.g., MIT, Apache 2.0) in this section once the project owner selects one.
+## Checks
+
+```bash
+cd newmyapp
+CI=true npm test -- --watchAll=false
+CI=true npm run build
+```
+
+From the repository root with the Python environment active:
+
+```bash
+pip install pytest httpx
+python -m pytest Ai/tests -q
+```
+
+Tests cover retrying generation, preserving answers after submission failure, missing server configuration, and request bounds.
+
+## Current limitations
+
+- Mock-test scoring compares normalized strings, so open-ended answers can be marked incorrect even when semantically valid. Gemini feedback provides additional context.
+- Tests and interview sessions are not saved in MongoDB; the database stores accounts only.
+- JWTs are issued by login/signup, but practice routes are currently public and do not validate those tokens. Add enforcement and rate limiting before offering private or paid sessions.
+- Voice features depend on browser support and microphone permission; typed answers remain available.
+- The inherited Create React App toolchain and dependency tree include older packages and npm audit findings. Dependency modernization is separate work; do not apply forced upgrades without checking compatibility.
+
+No license has been selected for this repository.
