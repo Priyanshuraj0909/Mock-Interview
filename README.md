@@ -63,7 +63,7 @@ Open http://localhost:3000. The example client environment points at `http://loc
 | Variable | Purpose |
 | --- | --- |
 | `GEMINI_API_KEY` | Required for question generation and feedback; server only |
-| `GEMINI_MODEL` | Optional model override; defaults to `gemini-2.5-flash` |
+| `GEMINI_MODEL` | Optional model override; defaults to `gemini-3.8-flash` |
 | `MONGODB_URI` | Required for accounts; MongoDB connection string |
 | `MONGODB_DB` | Optional database name; defaults to `ai_mock_interview` |
 | `JWT_SECRET_KEY` | Required for auth; use a random secret of at least 32 characters |

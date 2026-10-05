@@ -45,3 +45,20 @@ def test_interview_difficulty_is_bounded():
         assert client.post('/api/interview/generate-questions', json={'interviewType': 'frontend_developer', 'difficultyLevel': 9}).status_code == 422
     finally:
         app.dependency_overrides.clear()
+
+
+def test_async_ai_question_generation():
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    model = SimpleNamespace(generate_content=AsyncMock(return_value=SimpleNamespace(text='[{"id": 1, "question": "Explain React", "correctAnswer": "A UI library"}]')))
+    app.dependency_overrides[tests.get_model] = lambda: model
+    try:
+        response = client.post('/api/generate-test', json={
+            'purpose': 'Practice', 'subject': 'React', 'difficulty': 'medium',
+            'testType': 'conceptual', 'timeLimit': 30,
+        })
+        assert response.status_code == 200
+        assert response.json()['questions'][0]['question'] == 'Explain React'
+        model.generate_content.assert_awaited_once()
+    finally:
+        app.dependency_overrides.clear()

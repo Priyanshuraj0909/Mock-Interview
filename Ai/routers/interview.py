@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
-import google.generativeai as genai
+from ai_service import configure_genai
 import json
 import re
 import os
@@ -46,12 +46,6 @@ class InterviewResponse(BaseModel):
     questions: List[Question]
 
 # Configure Gemini Model
-def configure_genai():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="AI service is not configured. Set GEMINI_API_KEY on the server.")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
 
 # Get model instance
 def get_model():
@@ -84,7 +78,7 @@ async def generate_questions(request: InterviewRequest, model = Depends(get_mode
         Make sure questions are specific, technical, and appropriate for the role.
         """
         
-        response = model.generate_content(prompt)
+        response = await model.generate_content(prompt)
         
         # Extract JSON from the response
         json_match = re.search(r'```json\s*(.*?)\s*```', response.text, re.DOTALL)
@@ -135,7 +129,7 @@ async def evaluate_answer(request: FeedbackRequest, model = Depends(get_model)):
         }}
         """
         
-        response = model.generate_content(prompt)
+        response = await model.generate_content(prompt)
         
         # Extract JSON from the response
         json_match = re.search(r'```json\s*(.*?)\s*```', response.text, re.DOTALL)

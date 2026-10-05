@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
-import google.generativeai as genai
+from ai_service import configure_genai
 import json
 import re
 import os
@@ -8,12 +8,6 @@ import os
 router = APIRouter()
 
 # Configure Gemini Model
-def configure_genai():
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise HTTPException(status_code=503, detail="AI service is not configured. Set GEMINI_API_KEY on the server.")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
 
 # Dependency for getting the model
 def get_model():
@@ -114,7 +108,7 @@ async def generate_test(params: TestParams, model=Depends(get_model)):
         # Add print statement for debugging
         print(f"Sending request to Gemini with params: {params}")
         
-        response = model.generate_content(prompt)
+        response = await model.generate_content(prompt)
         
         # Add debug output
         print(f"Received response from Gemini: {response.text[:100]}...")
@@ -189,7 +183,7 @@ async def submit_answers(data: AnswerSubmission, model=Depends(get_model)):
         5. Detailed explanations for any incorrect answers
         """
 
-        feedback_response = model.generate_content(feedback_prompt)
+        feedback_response = await model.generate_content(feedback_prompt)
         if not feedback_response.text:
             raise HTTPException(status_code=500, detail="Failed to generate feedback.")
 
