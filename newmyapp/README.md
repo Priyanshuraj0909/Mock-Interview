@@ -1,5 +1,7 @@
 # Mock Interview client
 
+**[Open the live project →](https://mock-interview-king-09.vercel.app)**
+
 React client for the Mock Interview platform. See the [repository README](../README.md) for API setup, environment variables, deployment, tests, and limitations.
 
 ```bash

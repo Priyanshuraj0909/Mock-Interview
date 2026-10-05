@@ -1,14 +1,23 @@
 # Mock Interview
 
-Practice technical interviews and timed mock tests with a React interface and a FastAPI API. Choose your subject or engineering role, answer questions, and review feedback generated with Google Gemini.
+Practice technical interviews and timed mock tests with React and FastAPI. Choose your subject or engineering role, answer questions, and review AI feedback. Written and code answers are evaluated by meaning, with Groq model fallbacks available when Gemini is unavailable.
 
-**Live site:** https://mock-interview-king-09.vercel.app
+## Open the project
+
+**[Open Mock Interview →](https://mock-interview-king-09.vercel.app)**
+
+[Take a mock test](https://mock-interview-king-09.vercel.app/dashboard) · [Open the interview studio](https://mock-interview-king-09.vercel.app/dashboardmain) · [Create an account](https://mock-interview-king-09.vercel.app/signup) · [Sign in](https://mock-interview-king-09.vercel.app/login)
+
+Source code: [Priyanshuraj0909/Mock-Interview](https://github.com/Priyanshuraj0909/Mock-Interview)
 
 ## Features
 
 - Responsive landing page with direct access to mock tests and the interview studio.
 - Ten-question mock tests configured by subject, purpose, difficulty, type, and time limit.
 - Role-specific interview questions, optional job descriptions, typed answers, and browser voice tools.
+- Semantic grading for theoretical answers and code: equivalent explanations and implementations are accepted.
+- Consistent scores, correctness counts, and per-question explanations from one validated grading result.
+- Gemini retries and an ordered Groq fallback chain: GPT-OSS 20B → GPT-OSS 120B → Qwen 3.8 27B, configurable through environment settings.
 - Answer feedback, score breakdowns, and another-test workflow.
 - MongoDB-backed signup and login with bcrypt password hashing and JWT issuance.
 - Retry failed question generation and submissions without losing selected answers.
@@ -19,14 +28,28 @@ Practice technical interviews and timed mock tests with a React interface and a 
 | Path | Purpose |
 | --- | --- |
 | `newmyapp/` | React 19 client, React Router, Tailwind CSS |
-| `Ai/` | FastAPI application, MongoDB access, auth and Gemini routers |
+| `Ai/` | FastAPI application, MongoDB access, auth, AI provider failover, and grading |
 | `api/index.py` | Vercel entrypoint for the existing API |
 | `vercel.json` | React build, Python function, and SPA routing |
-| `Ai/tests/` | API configuration and validation regression tests |
+| `Ai/tests/` | API, semantic grading, database failure, and AI failover regression tests |
+
+## AI fallback
+
+Gemini is tried first. Temporary overload, rate-limit, and transport errors receive one retry after one second, with a 15-second timeout per attempt. If generation still fails, the API uses Groq when `GROQ_API_KEY` is configured. Groq tries `openai/gpt-oss-20b`, then `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b`. Each model has a 10-second timeout; the entire AI request has a 55-second limit, so slow attempts may exhaust the budget before all models run. The next model is tried after API errors, rate limits, transport failures, timeouts, or empty output. Invalid API keys (401) stop the Groq chain. If only Groq is configured, it is used directly. The same behavior covers mock tests, interview questions, and answer feedback.
+
+When both providers fail, the API returns a friendly HTTP 503 response with `Retry-After: 10`, and mock-test answers remain available for resubmission. Add the Groq key in Vercel environment settings and redeploy to enable failover. Provider errors and keys are never included in the response. See [Groq's API documentation](https://console.groq.com/docs/text-chat) for key setup and model use.
+
+Override the Groq chain with `GROQ_MODELS=model-one,model-two,model-three`. Whitespace and duplicates are removed, and attempts stop as soon as a model succeeds. Model access depends on your Groq account. An exhausted chain still returns the existing friendly HTTP 503 message; keys and provider response details stay on the server.
+
+## Written-answer grading
+
+Theoretical and code responses are graded by meaning, not exact reference text. Paraphrases, spelling mistakes that do not change meaning, and equivalent code with different variable or function names are accepted. Essential conceptual mistakes still count as incorrect. Blank answers count as incorrect without AI evaluation; multiple-choice answers are checked against the answer key.
+
+The score, counts, per-question verdicts, and explanations come from the same validated grades. Incomplete, duplicate, or malformed AI evaluations return a retryable error rather than guessing a score. A Gemini or Groq provider is required for semantic grading. Previous result screens are not regraded automatically; submit a new test to use the updated grader.
 
 ## Local setup
 
-Use Node.js 22 and Python 3.12 for a deployment-compatible environment. A MongoDB connection and Gemini API key are required for accounts and AI features respectively.
+Use Node.js 22 and Python 3.12 for a deployment-compatible environment. A MongoDB connection is required for accounts. Configure at least one AI provider key (`GEMINI_API_KEY` or `GROQ_API_KEY`) for question generation and grading.
 
 ### API
 
@@ -73,7 +96,7 @@ Open http://localhost:3000. The example client environment points at `http://loc
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime; defaults to 60 minutes |
 | `CORS_ORIGINS` | Comma-separated allowed origins; defaults to localhost:3000 |
 
-Generate a JWT secret with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Store it in environment settings, never in Git. A production JWT secret was provisioned during deployment.
+Generate a JWT secret with `python -c "import secrets; print(secrets.token_urlsafe(48))"`. Store it in environment settings, never in Git.
 
 Missing AI or database configuration returns a clear HTTP 503 response. Deployment alone does not provision MongoDB or Gemini access. **AI generation and account flows remain unavailable until their server environment variables are configured.**
 
@@ -83,7 +106,7 @@ The previous source contained a Gemini key. It has been removed from current cod
 
 The GitHub repository is linked to the `mock-interview` project on Vercel. Pushes to `main` trigger production builds. Import the repository with its root directory set to the repository root; `vercel.json` builds the client in `newmyapp` and serves the Python API under `/api`.
 
-1. Set `GEMINI_API_KEY`, `MONGODB_URI`, and `JWT_SECRET_KEY` in Vercel project environment settings for the required environments.
+1. Set an AI provider key (`GEMINI_API_KEY` and/or `GROQ_API_KEY`), `MONGODB_URI`, and `JWT_SECRET_KEY` in Vercel project environment settings. For failover from Gemini to Groq, configure both provider keys.
 2. Ensure the MongoDB deployment permits connections from the hosting environment.
 3. Redeploy after changing environment variables.
 4. Check `/api/test`, then verify signup, login, question generation, and submission.
@@ -118,7 +141,7 @@ pip install pytest httpx
 python -m pytest Ai/tests -q
 ```
 
-Tests cover retrying generation, preserving answers after submission failure, missing server configuration, and request bounds.
+Regression tests cover semantic verdicts, paraphrases and equivalent code, score consistency, malformed grading responses, Gemini retries, ordered Groq model failover, timeouts, database connection failures, input validation, and preserving answers after failed submission.
 
 ## Current limitations
 
@@ -140,17 +163,3 @@ If signup or login reports that the account database is unavailable, inspect the
 - Redeploy after changing Vercel environment variables.
 
 The API bundles `certifi` roots and keeps TLS certificate verification enabled. Database failures return HTTP 503 with a retry message, without exposing driver connection details. Atlas configuration must still allow the connection.
-
-## AI fallback
-
-Gemini is tried first. Temporary overload, rate-limit, and transport errors receive one retry after one second, with a 15-second timeout per attempt. If generation still fails, the API uses Groq when `GROQ_API_KEY` is configured. Groq tries `openai/gpt-oss-20b`, then `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b`. Each model has a 10-second timeout; the entire AI request has a 55-second limit, so slow attempts may exhaust the budget before all models run. The next model is tried after API errors, rate limits, transport failures, timeouts, or empty output. Invalid API keys (401) stop the Groq chain. If only Groq is configured, it is used directly. The same behavior covers mock tests, interview questions, and answer feedback.
-
-When both providers fail, the API returns a friendly HTTP 503 response with `Retry-After: 10`, and mock-test answers remain available for resubmission. Add the Groq key in Vercel environment settings and redeploy to enable failover. Provider errors and keys are never included in the response. See [Groq's API documentation](https://console.groq.com/docs/text-chat) for key setup and model use.
-
-Override the Groq chain with `GROQ_MODELS=model-one,model-two,model-three`. Whitespace and duplicates are removed, and attempts stop as soon as a model succeeds. Model access depends on your Groq account. An exhausted chain still returns the existing friendly HTTP 503 message; keys and provider response details stay on the server.
-
-## Written-answer grading
-
-Theoretical and code responses are graded by meaning, not exact reference text. Paraphrases, spelling mistakes that do not change meaning, and equivalent code with different variable or function names are accepted. Essential conceptual mistakes still count as incorrect. Blank answers count as incorrect without AI evaluation; multiple-choice answers are checked against the answer key.
-
-The score, counts, per-question verdicts, and explanations come from the same validated grades. Incomplete, duplicate, or malformed AI evaluations return a retryable error rather than guessing a score. A Gemini or Groq provider is required for semantic grading. Previous result screens are not regraded automatically; submit a new test to use the updated grader.
