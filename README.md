@@ -122,7 +122,7 @@ Tests cover retrying generation, preserving answers after submission failure, mi
 
 ## Current limitations
 
-- Mock-test scoring compares normalized strings, so open-ended answers can be marked incorrect even when semantically valid. Gemini feedback provides additional context.
+- Written and code answers use AI semantic grading. Equivalent meanings and valid alternative code are accepted; grading remains an AI assessment rather than executed code tests. Multiple-choice answers use the answer key.
 - Tests and interview sessions are not saved in MongoDB; the database stores accounts only.
 - JWTs are issued by login/signup, but practice routes are currently public and do not validate those tokens. Add enforcement and rate limiting before offering private or paid sessions.
 - Voice features depend on browser support and microphone permission; typed answers remain available.
@@ -148,3 +148,9 @@ Gemini is tried first. Temporary overload, rate-limit, and transport errors rece
 When both providers fail, the API returns a friendly HTTP 503 response with `Retry-After: 10`, and mock-test answers remain available for resubmission. Add the Groq key in Vercel environment settings and redeploy to enable failover. Provider errors and keys are never included in the response. See [Groq's API documentation](https://console.groq.com/docs/text-chat) for key setup and model use.
 
 Override the Groq chain with `GROQ_MODELS=model-one,model-two,model-three`. Whitespace and duplicates are removed, and attempts stop as soon as a model succeeds. Model access depends on your Groq account. An exhausted chain still returns the existing friendly HTTP 503 message; keys and provider response details stay on the server.
+
+## Written-answer grading
+
+Theoretical and code responses are graded by meaning, not exact reference text. Paraphrases, spelling mistakes that do not change meaning, and equivalent code with different variable or function names are accepted. Essential conceptual mistakes still count as incorrect. Blank answers count as incorrect without AI evaluation; multiple-choice answers are checked against the answer key.
+
+The score, counts, per-question verdicts, and explanations come from the same validated grades. Incomplete, duplicate, or malformed AI evaluations return a retryable error rather than guessing a score. A Gemini or Groq provider is required for semantic grading. Previous result screens are not regraded automatically; submit a new test to use the updated grader.

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel, Field
 from ai_service import configure_genai
+from grading import grade_submission
 import json
 import re
 import os
@@ -148,65 +149,7 @@ async def generate_test(params: TestParams, model=Depends(get_model)):
 
 @router.post("/submit-answers")
 async def submit_answers(data: AnswerSubmission, model=Depends(get_model)):
-    try:
-        answers = []
-        correct_count = 0
-
-        for question in data.questions:
-            user_answer = data.answers.get(str(question.get('id')), "")
-            correct_answer = question.get('correctAnswer', '')
-            is_correct = str(user_answer).strip().lower() == str(correct_answer).strip().lower()
-
-            if is_correct:
-                correct_count += 1
-
-            answers.append({
-                "question": question.get('question', ''),
-                "userAnswer": user_answer,
-                "correctAnswer": correct_answer,
-                "correct": is_correct
-            })
-
-        # Generate feedback
-        feedback_prompt = f"""
-        Provide detailed feedback for a mock test with the following parameters:
-        - Subject: {data.testParams.subject}
-        - Difficulty: {data.testParams.difficulty}
-        - Test Type: {data.testParams.testType}
-
-        The user scored {correct_count} out of {len(data.questions)}.
-        Here are the questions and answers:
-
-        {json.dumps(answers, indent=2)}
-
-        Provide:
-        1. An overall assessment of performance
-        2. Areas of strength
-        3. Areas needing improvement
-        4. Study recommendations
-        5. Detailed explanations for any incorrect answers
-        """
-
-        feedback_response = await model.generate_content(feedback_prompt)
-        if not feedback_response.text:
-            raise HTTPException(status_code=500, detail="Failed to generate feedback.")
-
-        return {
-            "score": int((correct_count / len(data.questions)) * 100),
-            "correctAnswers": correct_count,
-            "incorrectAnswers": len(data.questions) - correct_count,
-            "feedback": feedback_response.text,
-            "questionAnalysis": answers
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        # More detailed error message
-        import traceback
-        error_detail = str(e) + "\n" + traceback.format_exc()
-        print(f"Error in submit_answers: {error_detail}")
-        raise HTTPException(status_code=500, detail=str(e))
+    return await grade_submission(data, model)
 
 # Simple test endpoint to verify API is working
 @router.get("/test")
