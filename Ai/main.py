@@ -3,7 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from pymongo.errors import PyMongoError
+import logging
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tests
 from routers import interview
@@ -12,6 +15,21 @@ from routers import auth
 from database import connect_to_mongo, close_mongo_connection
 
 app = FastAPI()
+logger = logging.getLogger(__name__)
+
+
+@app.exception_handler(PyMongoError)
+async def database_error_handler(request: Request, exc: PyMongoError):
+    # Driver messages can contain hostnames and credentials; do not return them.
+    logger.error("Database request failed: %s", type(exc).__name__)
+    return JSONResponse(
+        status_code=503,
+        headers={"Retry-After": "10"},
+        content={
+            "success": False,
+            "message": "The account database is unavailable. Please try again shortly.",
+        },
+    )
 
 # CORS configuration (Cross Origin REsource Sharing)
 app.add_middleware(

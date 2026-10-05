@@ -1,4 +1,5 @@
 import os
+import certifi
 from typing import Optional
 
 from fastapi import HTTPException
@@ -19,7 +20,15 @@ _client_holder = _MongoClientHolder()
 
 def _build_client() -> AsyncIOMotorClient:
     uri = os.getenv("MONGODB_URI") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
-    return AsyncIOMotorClient(uri, serverSelectionTimeoutMS=5000)
+    options = {
+        "serverSelectionTimeoutMS": 5000,
+        "connectTimeoutMS": 5000,
+        "socketTimeoutMS": 10000,
+    }
+    # Atlas uses TLS. Ship a known CA bundle instead of depending on host roots.
+    if uri.startswith("mongodb+srv://") or ".mongodb.net" in uri:
+        options.update(tls=True, tlsCAFile=certifi.where())
+    return AsyncIOMotorClient(uri, **options)
 
 
 def get_client() -> AsyncIOMotorClient:

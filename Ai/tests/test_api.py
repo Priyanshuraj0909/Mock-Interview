@@ -62,3 +62,39 @@ def test_async_ai_question_generation():
         model.generate_content.assert_awaited_once()
     finally:
         app.dependency_overrides.clear()
+
+
+def test_database_connection_failure_is_recoverable(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    from pymongo.errors import ServerSelectionTimeoutError
+    from database import get_database
+    from routers import auth
+    monkeypatch.setattr(auth, 'SECRET_KEY', 'test-secret-' * 4)
+    collection = SimpleNamespace(find_one=AsyncMock(side_effect=ServerSelectionTimeoutError('SSL handshake failed: private-host')))
+    app.dependency_overrides[get_database] = lambda: {'users': collection}
+    try:
+        for path, payload in [
+            ('/api/auth/signup', {'name': 'Test', 'email': 'test@example.com', 'purpose': 'practice', 'password': 'test-password'}),
+            ('/api/auth/login', {'email': 'test@example.com', 'password': 'test-password'}),
+        ]:
+            response = client.post(path, json=payload)
+            assert response.status_code == 503
+            assert response.headers['retry-after'] == '10'
+            assert 'database is unavailable' in response.json()['message']
+            assert 'private-host' not in response.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_atlas_uses_verified_ca_bundle(monkeypatch):
+    from unittest.mock import Mock
+    import database
+    import certifi
+    factory = Mock()
+    monkeypatch.setenv('MONGODB_URI', 'mongodb+srv://example.mongodb.net/test')
+    monkeypatch.setattr(database, 'AsyncIOMotorClient', factory)
+    database._build_client()
+    assert factory.call_args.kwargs['tls'] is True
+    assert factory.call_args.kwargs['tlsCAFile'] == certifi.where()
+    assert 'tlsAllowInvalidCertificates' not in factory.call_args.kwargs

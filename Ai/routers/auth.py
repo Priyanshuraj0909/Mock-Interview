@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from jose import jwt
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field
+from pymongo.errors import DuplicateKeyError
 
 from database import get_database
 
@@ -72,7 +73,13 @@ async def signup(payload: SignupRequest, db=Depends(get_database)):
         "created_at": datetime.utcnow(),
     }
 
-    result = await users_collection.insert_one(user_doc)
+    try:
+        result = await users_collection.insert_one(user_doc)
+    except DuplicateKeyError:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"success": False, "message": "Email already registered"},
+        )
     user_doc["_id"] = result.inserted_id
 
     token = _create_access_token({"sub": str(result.inserted_id), "email": normalized_email})

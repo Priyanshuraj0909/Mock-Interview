@@ -11,6 +11,7 @@ const Signup = () => {
   const [purpose, setPurpose] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(false);
   const [isError, setIsError] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const navigate = useNavigate();
@@ -39,6 +40,8 @@ const Signup = () => {
 
   const handleSignup = async (e) => {
     e.preventDefault();
+    if (loading) return;
+    setLoading(true);
     setMessage('');
     setIsError(false);
     
@@ -63,6 +66,8 @@ const Signup = () => {
     } catch (error) {
       setIsError(true);
       setMessage(error.response?.data?.message || error.response?.data?.detail || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -178,13 +183,14 @@ const Signup = () => {
           <div className="pt-2">
             <button
               type="submit"
+              disabled={loading}
               className={`w-full py-3 px-4 rounded-md text-white font-semibold transition-colors ${
                 darkMode 
                   ? 'bg-blue-600 hover:bg-blue-700 focus:bg-blue-700' 
                   : 'bg-blue-700 hover:bg-blue-800 focus:bg-blue-800'
               } focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50`}
             >
-              Create Account
+              {loading ? 'Creating account...' : 'Create Account'}
             </button>
           </div>
         </form>

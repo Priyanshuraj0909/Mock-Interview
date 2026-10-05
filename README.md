@@ -126,3 +126,14 @@ Tests cover retrying generation, preserving answers after submission failure, mi
 - The inherited Create React App toolchain and dependency tree include older packages and npm audit findings. Dependency modernization is separate work; do not apply forced upgrades without checking compatibility.
 
 No license has been selected for this repository.
+
+## Troubleshooting Atlas connections
+
+If signup or login reports that the account database is unavailable, inspect the Vercel runtime log. A `ServerSelectionTimeoutError` with a TLS handshake failure means the driver cannot establish a database connection; it does not mean the signup password is wrong.
+
+- Confirm the Atlas cluster is running and `MONGODB_URI` uses its current driver connection string.
+- Check Atlas **Network Access → IP Access List**: it must permit the hosting environment's outbound addresses. An entry for your laptop alone does not allow Vercel.
+- Check the database user's credentials and URL-encode special characters in the URI password.
+- Redeploy after changing Vercel environment variables.
+
+The API bundles `certifi` roots and keeps TLS certificate verification enabled. Database failures return HTTP 503 with a retry message, without exposing driver connection details. Atlas configuration must still allow the connection.

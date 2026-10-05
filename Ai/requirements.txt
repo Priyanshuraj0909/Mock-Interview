@@ -8,3 +8,4 @@ passlib[bcrypt]
 bcrypt<4
 python-jose[cryptography]
 email-validator
+certifi
