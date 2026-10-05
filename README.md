@@ -64,7 +64,8 @@ Open http://localhost:3000. The example client environment points at `http://loc
 | --- | --- |
 | `GEMINI_API_KEY` | Primary question generation and feedback key; server only. At least one AI provider key is required. |
 | `GROQ_API_KEY` | Optional server-only key enabling fallback if Gemini is unavailable |
-| `GROQ_MODEL` | Optional Groq model override; defaults to `openai/gpt-oss-20b` |
+| `GROQ_MODEL` | Optional preferred Groq model, followed by the default fallback list |
+| `GROQ_MODELS` | Optional comma-separated ordered model list; overrides `GROQ_MODEL` and the defaults |
 | `GEMINI_MODEL` | Optional model override; defaults to `gemini-3.8-flash` |
 | `MONGODB_URI` | Required for accounts; MongoDB connection string |
 | `MONGODB_DB` | Optional database name; defaults to `ai_mock_interview` |
@@ -142,6 +143,8 @@ The API bundles `certifi` roots and keeps TLS certificate verification enabled. 
 
 ## AI fallback
 
-Gemini is tried first. Temporary overload, rate-limit, and transport errors receive one retry after one second, with a 15-second timeout per attempt. If generation still fails, the API uses Groq when `GROQ_API_KEY` is configured. Groq has a 20-second timeout. If only Groq is configured, it is used directly. The same behavior covers mock tests, interview questions, and answer feedback.
+Gemini is tried first. Temporary overload, rate-limit, and transport errors receive one retry after one second, with a 15-second timeout per attempt. If generation still fails, the API uses Groq when `GROQ_API_KEY` is configured. Groq tries `openai/gpt-oss-20b`, then `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b`. Each model has a 10-second timeout; the entire AI request has a 55-second limit, so slow attempts may exhaust the budget before all models run. The next model is tried after API errors, rate limits, transport failures, timeouts, or empty output. Invalid API keys (401) stop the Groq chain. If only Groq is configured, it is used directly. The same behavior covers mock tests, interview questions, and answer feedback.
 
 When both providers fail, the API returns a friendly HTTP 503 response with `Retry-After: 10`, and mock-test answers remain available for resubmission. Add the Groq key in Vercel environment settings and redeploy to enable failover. Provider errors and keys are never included in the response. See [Groq's API documentation](https://console.groq.com/docs/text-chat) for key setup and model use.
+
+Override the Groq chain with `GROQ_MODELS=model-one,model-two,model-three`. Whitespace and duplicates are removed, and attempts stop as soon as a model succeeds. Model access depends on your Groq account. An exhausted chain still returns the existing friendly HTTP 503 message; keys and provider response details stay on the server.
