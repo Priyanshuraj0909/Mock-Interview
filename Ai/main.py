@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -10,11 +11,21 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tests
 from routers import interview
-from routers import auth
+from routers import auth, sessions, resume
 
 from database import connect_to_mongo, close_mongo_connection
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app):
+    if os.getenv("MONGODB_URI") or os.getenv("MONGO_URL"):
+        await connect_to_mongo()
+    try:
+        yield
+    finally:
+        await close_mongo_connection()
+
+
+app = FastAPI(title="Mock Interview API", version="0.2.0", lifespan=lifespan)
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +38,7 @@ async def database_error_handler(request: Request, exc: PyMongoError):
         headers={"Retry-After": "10"},
         content={
             "success": False,
-            "message": "The account database is unavailable. Please try again shortly.",
+            "message": "The practice database is unavailable. Please try again shortly.",
         },
     )
 
@@ -42,19 +53,11 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(sessions.router)
+app.include_router(resume.router)
 app.include_router(tests.router, prefix="/api")
 app.include_router(interview.router, prefix="/api/interview", tags=["interview"])
 
-
-@app.on_event("startup")
-async def on_startup():
-    if os.getenv("MONGODB_URI") or os.getenv("MONGO_URL"):
-        await connect_to_mongo()
-
-
-@app.on_event("shutdown")
-async def on_shutdown():
-    await close_mongo_connection()
 
 @app.get("/")
 def read_root():

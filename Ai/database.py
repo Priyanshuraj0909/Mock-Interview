@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import HTTPException
 from dotenv import load_dotenv
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import AsyncMongoClient
 from pymongo.errors import PyMongoError
 
 
@@ -12,15 +12,16 @@ load_dotenv()
 
 
 class _MongoClientHolder:
-    client: Optional[AsyncIOMotorClient] = None
+    client: Optional[AsyncMongoClient] = None
 
 
 _client_holder = _MongoClientHolder()
 
 
-def _build_client() -> AsyncIOMotorClient:
+def _build_client() -> AsyncMongoClient:
     uri = os.getenv("MONGODB_URI") or os.getenv("MONGO_URL") or "mongodb://localhost:27017"
     options = {
+        "tz_aware": True,
         "serverSelectionTimeoutMS": 5000,
         "connectTimeoutMS": 5000,
         "socketTimeoutMS": 10000,
@@ -28,10 +29,10 @@ def _build_client() -> AsyncIOMotorClient:
     # Atlas uses TLS. Ship a known CA bundle instead of depending on host roots.
     if uri.startswith("mongodb+srv://") or ".mongodb.net" in uri:
         options.update(tls=True, tlsCAFile=certifi.where())
-    return AsyncIOMotorClient(uri, **options)
+    return AsyncMongoClient(uri, **options)
 
 
-def get_client() -> AsyncIOMotorClient:
+def get_client() -> AsyncMongoClient:
     if _client_holder.client is None:
         _client_holder.client = _build_client()
     return _client_holder.client
@@ -52,6 +53,8 @@ async def connect_to_mongo():
     db = client[get_database_name()]
     try:
         await db["users"].create_index("email", unique=True)
+        await db["sessions"].create_index([("userId", 1), ("createdAt", -1)])
+        await db["rate_limits"].create_index("expiresAt", expireAfterSeconds=0)
     except PyMongoError:
         # Index might already exist or creation failed; log/ignore for now
         pass
@@ -59,5 +62,5 @@ async def connect_to_mongo():
 
 async def close_mongo_connection():
     if _client_holder.client:
-        _client_holder.client.close()
+        await _client_holder.client.close()
         _client_holder.client = None

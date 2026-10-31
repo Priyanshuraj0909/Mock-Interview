@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import { API_BASE_URL } from '../services/api';
 
 const Login = () => {
     const navigate = useNavigate();
+  const location = useLocation();
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -31,7 +32,8 @@ const Login = () => {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
                 localStorage.setItem('useremail', response.data.user.email);
-                navigate('/dashboard');
+                window.dispatchEvent(new Event('auth-changed'));
+                navigate(location.state?.from || '/history', { replace: true });
             }
         } catch (err) {
             setError(err.response?.data?.message || err.response?.data?.detail || 'An error occurred during login');

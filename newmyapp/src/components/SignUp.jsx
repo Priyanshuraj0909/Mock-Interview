@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Moon, Sun } from 'lucide-react';
 
 import { API_BASE_URL } from '../services/api';
@@ -15,6 +15,7 @@ const Signup = () => {
   const [isError, setIsError] = useState(false);
   const [darkMode, setDarkMode] = useState(true);
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Check system preference on initial load
   useEffect(() => {
@@ -57,7 +58,8 @@ const Signup = () => {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('user', JSON.stringify(response.data.user));
         localStorage.setItem('useremail', response.data.user.email);
-        navigate('/dashboard');
+        window.dispatchEvent(new Event('auth-changed'));
+                navigate(location.state?.from || '/history', { replace: true });
       } else {
         setIsError(true);
         setMessage(response.data.message || 'Signup failed. Please try again.');

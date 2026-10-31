@@ -1,371 +1,221 @@
 <div align="center">
 
-# 🎯 Mock Interview AI
+# Mock Interview AI
 
-### Your AI-Powered Interview Preparation Companion
+**Practice with purpose. Build confidence, one session at a time.**
 
-**Practice smarter. Interview better. Get career-ready.**
+Resume-aware technical interviews, timed mock tests, saved progress, and actionable AI feedback.
 
-Prepare for technical interviews with configurable mock tests, role-specific questions, and AI feedback on your answers.
+[Live application](https://mock-interview-king-09.vercel.app/) · [GitHub](https://github.com/Priyanshuraj0909/Mock-Interview) · [Development roadmap](docs/development-roadmap.md)
 
-![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)
-![MongoDB](https://img.shields.io/badge/MongoDB-47A248?logo=mongodb&logoColor=white)
-![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?logo=googlegemini&logoColor=white)
-![Groq](https://img.shields.io/badge/Groq-F55036)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3-06B6D4?logo=tailwindcss&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-000000?logo=vercel&logoColor=white)
-
-**[Open Live Demo](https://mock-interview-king-09.vercel.app/)** · **[GitHub Repository](https://github.com/Priyanshuraj0909/Mock-Interview)**
-
-[Mock Tests](https://mock-interview-king-09.vercel.app/dashboard) · [Interview Studio](https://mock-interview-king-09.vercel.app/dashboardmain) · [Sign Up](https://mock-interview-king-09.vercel.app/signup) · [Sign In](https://mock-interview-king-09.vercel.app/login)
+React 19 · Vite · TypeScript · FastAPI · MongoDB · Gemini / Groq
 
 </div>
 
-## Explore
+## What you can do
 
-[Overview](#overview) · [Features](#features) · [Screenshots](#screenshots) · [Technology](#technology-stack) · [Architecture](#architecture) · [AI Integration](#ai-integration-and-failover) · [Local Setup](#local-development) · [Configuration](#environment-variables) · [API](#api-reference) · [Testing](#testing-and-quality) · [Deployment](#vercel-deployment) · [Limitations](#limitations-and-future-work)
-
-## Overview
-
-Mock Interview is a full-stack practice platform for students, placement candidates, and developers preparing for technical roles. It brings question generation, timed practice, and answer review into one interface so users can rehearse explanations and identify concepts that need more work.
-
-The React client communicates with a FastAPI backend. Google Gemini or Groq generates questions and evaluates written responses; MongoDB stores accounts. Multiple-choice answers use the supplied answer key, while written and code answers receive meaning-based evaluation and explanations.
-
-## Features
-
-| Area | Implemented behavior |
+| Workflow | Implemented behavior |
 | --- | --- |
-| 📝 Mock tests | Configure purpose, subject, difficulty, test type, and duration; generate a test, navigate questions, and submit when finished or when the timer expires. Generation requests ten questions, though the parser does not enforce exactly ten. |
-| 🎙️ Interview studio | Generate role-specific questions with optional job description context and difficulty from 1–5. Supports software engineering, data science, frontend, backend, and full-stack roles. Generation requests five questions. |
-| 💬 Answer practice | Type responses or use browser speech recognition where supported; optional speech synthesis reads interview prompts aloud. |
-| 🧠 Semantic grading | Evaluate theoretical explanations and code by technical meaning, including paraphrases and equivalent implementations. Return per-question explanations, correct/incorrect counts, and a percentage score. |
-| 🔁 AI failover | Use Gemini first when configured, retry temporary failures, and fall back through an ordered Groq model list. |
-| 🔐 Accounts | Sign up and log in with MongoDB account storage, bcrypt password hashes, and JWT issuance. |
-| 📊 Results | Review answer breakdowns and feedback, then start another test. Retry failed mock-test generation or submission; submission failures preserve answers in the mounted interface. |
-| 📱 Interface | Responsive React screens styled with Tailwind CSS, with loading states and request error feedback. |
+| Mock tests | Choose a subject, difficulty, purpose, test type, and duration. Generate exactly ten validated questions and review graded answers. |
+| Personalized interviews | Choose a technical role and difficulty, optionally supply a job description and resume, and generate five questions. |
+| Resume upload | Extract text from a PDF or UTF-8 text file, or paste it directly. Files are limited to 2 MB, ten PDF pages, and 20,000 extracted characters. Scanned PDFs without text require pasted text. |
+| Adaptive follow-ups | After an answer is evaluated, request a question that probes its misconception or explores a deeper trade-off. Up to three follow-ups per interview, one per original question, before completion. |
+| Saved practice | Answers autosave after a short typing pause. Reopen sessions from History, including completed reports. |
+| Feedback and study priorities | Review scores, strengths, specific improvement points, and topic-level practice suggestions. |
+| Browser voice | Read questions aloud or dictate answers where browser support and microphone access permit. |
+| Accounts | Sign up and sign in with password hashes and expiring JWTs. All practice APIs verify authentication and session ownership. |
+| AI resilience | Bounded Gemini retries, ordered Groq fallback, strict output validation, and recoverable failure messages. |
 
-## Screenshots
+The interview studio and mock-test screens are accessible after sign-in. AI generation, evaluation, follow-up, and resume extraction requests share a database-backed per-user limit, defaulting to 20 requests per minute. History and autosaves do not consume that quota.
 
-Application screenshots have not been verified in the repository. The public directory contains image assets, but they are not presented here as screenshots of the current application.
+## Interface preview
 
-Use `docs/screenshots/` for future captures. The filenames below are a **proposed convention**, not existing images; no image links are embedded until captures are added.
+These are local browser captures with **mocked API responses and demonstration content**, not evidence of live AI accuracy.
 
-| Screen | Planned capture | Status |
-| --- | --- | --- |
-| Landing page | `docs/screenshots/landing.png` | Awaiting capture |
-| Mock-test configuration | `docs/screenshots/test-configuration.png` | Awaiting capture |
-| Generated questions | `docs/screenshots/questions.png` | Awaiting capture |
-| Interview studio | `docs/screenshots/interview-studio.png` | Awaiting capture |
-| Assessment results | `docs/screenshots/results.png` | Awaiting capture |
-| AI feedback | `docs/screenshots/feedback.png` | Awaiting capture |
-| Login and signup | `docs/screenshots/authentication.png` | Awaiting capture |
+![Interview studio desktop preview](docs/screenshots/interview-studio-desktop.png)
 
-## Technology Stack
+<details>
+<summary>Mobile preview</summary>
 
-| Layer | Technology | Purpose |
-| --- | --- | --- |
-| Frontend | React 19, React Router 7 | Interactive practice screens and browser routing |
-| Styling and UI | Tailwind CSS 3, Lucide React, Framer Motion | Styling, icons, and animation |
-| Client requests | Fetch, Axios | API communication |
-| Backend | Python, FastAPI, Pydantic | Async API routes and request/response validation |
-| Database | MongoDB, Motor | Account persistence and async database access |
-| Primary AI | Google Gemini via `google-genai` | Question generation and answer feedback |
-| Fallback AI | Groq Python SDK | Alternative inference with ordered model attempts |
-| Authentication | python-jose, Passlib, bcrypt | JWT issuance and password hashing |
-| Configuration and TLS | python-dotenv, certifi | Local configuration and trusted CA roots |
-| Testing | pytest, HTTPX, Jest, React Testing Library | Backend regressions and frontend retry behavior |
-| Build and hosting | Create React App, Vercel | React builds, Python functions, and routing |
+![Interview studio mobile preview](docs/screenshots/interview-studio-mobile.png)
+
+</details>
 
 ## Architecture
 
 ```mermaid
 flowchart TD
-    User[User] --> React[React interface]
-    React --> API[FastAPI backend]
-    API --> AI[Shared AI service]
-    AI --> Gemini[Gemini primary when configured]
-    Gemini -->|Failure and Groq configured| Groq[Ordered Groq fallback]
-    AI -->|Only Groq configured| Groq
-    Gemini --> Parsing[Route parsing and response validation]
-    Groq --> Parsing
-    Parsing --> Results[Questions and evaluation results]
-    Results --> React
-    API --> Auth[Signup and login]
-    Auth <--> Mongo[(MongoDB accounts)]
-    Auth --> JWT[JWT issuance]
-    JWT --> React
+    Browser[React / Vite client] --> API[FastAPI]
+    API --> Auth[JWT verification and account checks]
+    Auth --> Limits[MongoDB request quotas]
+    Limits --> Practice[Question generation and grading]
+    Practice --> Providers[Gemini primary / Groq fallback]
+    Providers --> Validation[Strict question and feedback validation]
+    Validation --> Sessions[(Private MongoDB sessions)]
+    API --> Sessions
+    Sessions --> History[History / resume practice / reports]
+    History --> Browser
 ```
 
-The AI service centralizes provider selection and time budgets. Test grading separately validates AI evaluations before calculating scores. Account routes use MongoDB; practice routes currently operate without JWT verification.
+Questions, reference answers, configuration, answers, evaluations, and results are owned by server-side sessions. The browser receives no reference answer keys before grading. Submission accepts a session ID and answers, then grades against the stored question set.
 
-## How It Works
+Each saved session belongs to one account. Answer updates use a revision number to reject stale writes from another tab. Grading uses an expiring lease to prevent overlapping updates; retries return an already saved result instead of evaluating it again. Graded interview answers cannot be edited under an existing evaluation.
 
-1. Open the landing page and choose a mock test or the interview studio.
-2. Configure the subject or role, difficulty, and other relevant session options.
-3. React sends the configuration to FastAPI, which asks the configured AI provider for questions.
-4. Answer the questions using the available text, multiple-choice, or browser voice controls.
-5. Submit the test or an individual interview answer for evaluation.
-6. Review the resulting score, explanations, strengths, and improvement feedback available in that workflow.
+The test deadline is saved on the server and displayed after reload. Timer-triggered submission is a client practice convenience; this platform is not a proctored examination system.
 
-**Mock-test grading:** Multiple-choice answers are compared with the returned answer key after trimming whitespace and normalizing case. Blank answers are incorrect. Nonblank written and code answers are evaluated semantically: the prompt accepts equivalent explanations and valid alternative algorithms while rejecting material conceptual errors. Code is assessed by AI reasoning; it is not executed.
+## Technology
 
-The grader requires one unique evaluation for every expected written answer, with strict boolean verdicts and nonempty explanations. The server derives the percentage and correctness counts from those verdicts. The submission still uses AI for overall feedback even when every question is multiple-choice.
-
-**Interview feedback:** A separate endpoint returns a score, feedback, strength points, and improvement points for each submitted interview answer.
-
-## AI Integration and Failover
-
-The shared service in [`Ai/ai_service.py`](Ai/ai_service.py) is used by both practice workflows.
-
-| Setting | Behavior in this repository |
+| Layer | Technology |
 | --- | --- |
-| Primary provider | Gemini when `GEMINI_API_KEY` is present |
-| Gemini default | `gemini-3.8-flash`, overridable with `GEMINI_MODEL` |
-| Gemini timeout | 15 seconds per SDK request |
-| Gemini retry | One retry after one second for HTTP 429, 500, 502, 503, 504 or transport errors; other handled failures proceed to fallback |
-| Groq default order | `openai/gpt-oss-20b` → `openai/gpt-oss-120b` → `qwen/qwen3.8-27b` |
-| Groq timeout | 10 seconds per model attempt; SDK retries disabled |
-| Total time budget | 55 seconds per shared AI generation call |
-| Model overrides | `GROQ_MODELS` replaces the order; otherwise `GROQ_MODEL` is tried before defaults. Empty entries and duplicates are removed. |
-| Exhausted providers | HTTP 503 with a friendly retry message and `Retry-After: 10` |
+| Client | React 19, React Router 7, Vite 7 |
+| Types | TypeScript for API contracts, draft persistence, reports, and shared components; existing screens remain JSX |
+| UI | Tailwind CSS 3, Lucide icons |
+| API | Python 3.12 target, FastAPI, Pydantic |
+| Persistence | MongoDB, PyMongo Async, timezone-aware timestamps |
+| AI | Google GenAI SDK, Groq SDK, shared asynchronous adapter |
+| Resume parsing | pypdf, bounded PDF/text extraction |
+| Authentication | python-jose JWTs, existing Passlib/bcrypt password hashes |
+| Verification | pytest, HTTPX, Vitest, React Testing Library, GitHub Actions |
+| Hosting | Existing Vercel React static build and Python function |
 
-Groq advances after handled API errors, transport failures, timeouts, or empty responses. A rejected API key (HTTP 401) stops its model loop. When only Groq is configured, requests go directly to Groq. The total budget can expire before every fallback model is attempted.
+## Local development
 
-These model identifiers are **code defaults**, not a guarantee of current provider availability or account access. Set supported model names for your account before relying on generation. Provider failover handles request failures; malformed grading output is validated separately and returns a retryable error rather than an invented score.
-
-## Local Development
-
-### Prerequisites
-
-- Git and npm.
-- Node.js 22 and Python 3.12 as suggested setup targets; this repository does not pin their versions.
-- A reachable MongoDB instance for account features.
-- At least one AI provider key for question generation and grading.
-
-### 1. Clone the repository
+Use Node.js 22.12+ within the Node 22 release line and Python 3.12. The repository includes `.nvmrc` and `.python-version`.
 
 ```bash
 git clone https://github.com/Priyanshuraj0909/Mock-Interview.git
 cd Mock-Interview
-```
-
-### 2. Set up the API
-
-From the repository root:
-
-```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp Ai/.env.example Ai/.env
 ```
 
-On Windows, activate the environment with `.venv\Scripts\activate` and copy the example using your shell's equivalent command.
-
-Edit `Ai/.env`: configure an AI key, MongoDB connection, and a JWT secret of at least 32 characters. Generate a secret locally with:
-
-```bash
-python -c "import secrets; print(secrets.token_urlsafe(48))"
-```
-
-Start the API from its directory so dotenv can discover `Ai/.env`:
+Configure a reachable MongoDB instance, a JWT secret of at least 32 characters, and at least one AI provider key in `Ai/.env`. Use only supported model IDs available to your provider account.
 
 ```bash
 cd Ai
 uvicorn main:app --reload --port 8000
 ```
 
-### 3. Set up the client
-
-In another terminal, from the repository root:
+In another terminal:
 
 ```bash
 cd newmyapp
-npm ci --legacy-peer-deps
+npm ci
 cp .env.example .env
 npm start
 ```
 
-The client example sets `REACT_APP_API_BASE_URL=http://localhost:8000/api`. Restart the development server after changing client environment settings.
+The Vite client runs at `http://localhost:3000` and proxies `/api` to FastAPI at `http://127.0.0.1:8000`. API documentation is at `http://localhost:8000/docs`.
 
-| Local service | Address |
+On Windows, activate the environment with `.venv\Scripts\activate` and use your shell's file-copy command.
+
+## Configuration
+
+| Variable | Purpose / default |
 | --- | --- |
-| React application | http://localhost:3000 |
-| API health | http://localhost:8000/api/test |
-| FastAPI interactive documentation | http://localhost:8000/docs |
+| `GEMINI_API_KEY` | Gemini access; configure this or `GROQ_API_KEY` |
+| `GROQ_API_KEY` | Groq access and optional fallback |
+| `GEMINI_MODEL` | Configurable model ID; code default is `gemini-3.8-flash` |
+| `GROQ_MODELS` | Comma-separated ordered model IDs |
+| `GROQ_MODEL` | Optional preferred model when `GROQ_MODELS` is unset |
+| `MONGODB_URI` | Required for accounts, quotas, and practice persistence |
+| `MONGO_URL` | Compatibility alias when `MONGODB_URI` is unset |
+| `MONGODB_DB` | Database name; `ai_mock_interview` |
+| `JWT_SECRET_KEY` | Required server secret, at least 32 characters |
+| `JWT_ALGORITHM` | Symmetric signing algorithm; `HS256` by default |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime; `60` |
+| `AI_REQUESTS_PER_MINUTE` | Shared per-user request limit; `20` |
+| `CORS_ORIGINS` | Comma-separated browser origins; `http://localhost:3000` |
+| `VITE_API_BASE_URL` | Public client API base; `/api` |
+| `REACT_APP_API_BASE_URL` | Legacy client setting accepted when the Vite setting is unset |
 
-The health endpoint confirms API availability; it does not verify AI credentials or database connectivity.
+Server credentials belong only in server environment settings. Client variables are public build-time configuration. The original resume file is not stored; extracted text is saved privately with the interview and sent to the configured AI provider. Browser voice input may use the browser vendor's speech service.
 
-## Environment Variables
+MongoDB holds `users`, `sessions`, and `rate_limits`. Startup creates the unique user email index, the session owner/time index, and a TTL index for quota buckets. No migration of existing account documents is required; existing bcrypt hashes remain supported.
 
-Keep server secrets in `Ai/.env` locally and in hosting environment settings in production. Never commit real credentials or put them in React variables.
+The repository previously documented a credential in source history. Revoke any such historical credential and keep replacement keys out of Git.
 
-| Variable | Required for | Default / behavior |
-| --- | --- | --- |
-| `GEMINI_API_KEY` | AI when using Gemini | At least one of this or `GROQ_API_KEY` is required |
-| `GROQ_API_KEY` | Groq inference or fallback | Optional with working Gemini; required for fallback |
-| `GEMINI_MODEL` | Optional model selection | `gemini-3.8-flash` |
-| `GROQ_MODEL` | Optional preferred Groq model | Prepended to defaults unless `GROQ_MODELS` is set |
-| `GROQ_MODELS` | Optional ordered Groq override | Comma-separated model names; see failover section |
-| `MONGODB_URI` | Account features | Explicit configuration required; example uses `mongodb://localhost:27017` |
-| `MONGO_URL` | Optional database compatibility alias | Used when `MONGODB_URI` is absent |
-| `MONGODB_DB` | Optional database selection | `ai_mock_interview` |
-| `JWT_SECRET_KEY` | Signup and login | Must contain at least 32 characters |
-| `JWT_ALGORITHM` | Optional token algorithm | `HS256` |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Optional token lifetime | `60` |
-| `CORS_ORIGINS` | Optional allowed browser origins | Comma-separated; defaults to `http://localhost:3000` |
-| `REACT_APP_API_BASE_URL` | Client API location | Defaults to same-origin `/api`; local example points at port 8000 |
+## API
 
-React variables are embedded into the public build. Missing provider configuration returns HTTP 503 for AI operations; missing account configuration returns HTTP 503 for account operations.
-
-## API Reference
+All practice endpoints require `Authorization: Bearer <token>`. Signup, login, and health endpoints are public.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| GET | `/` | Backend root message during direct local API access |
-| GET | `/api/test` | Basic API health response |
 | POST | `/api/auth/signup` | Create an account and issue a JWT |
-| POST | `/api/auth/login` | Verify credentials and issue a JWT |
-| POST | `/api/generate-test` | Generate mock-test questions |
-| POST | `/api/submit-answers` | Grade answers and return scores and explanations |
-| POST | `/api/interview/generate-questions` | Generate role-specific interview questions |
-| POST | `/api/interview/evaluate-answer` | Return feedback, score, strengths, and improvements |
-| GET | `/api/interview/health` | Interview router health response |
+| POST | `/api/auth/login` | Sign in and issue a JWT |
+| GET | `/api/test` | API health and release version; does not verify MongoDB or provider access |
+| POST | `/api/generate-test` | Generate and save ten questions; return a private session without answer keys |
+| POST | `/api/submit-answers` | Grade `{sessionId, answers}` using server-owned questions |
+| POST | `/api/interview/generate-questions` | Generate and save five resume/job/role-aware questions |
+| POST | `/api/interview/evaluate-answer` | Evaluate `{sessionId, questionId, answer}` and save feedback |
+| POST | `/api/interview/follow-up` | Generate a bounded adaptive question for an evaluated answer |
+| POST | `/api/resume/extract` | Extract raw `application/pdf` or `text/plain` request content |
+| GET | `/api/sessions` | Return up to 30 recent session summaries; optional `limit` from 1–100 |
+| GET | `/api/sessions/{sessionId}` | Resume an owned session or retrieve its report |
+| PATCH | `/api/sessions/{sessionId}/answers` | Save `{answers, revision}`; return the next revision |
+| GET | `/api/interview/health` | Interview router health |
 
-In production, `/` serves the React application. The local FastAPI `/docs` interface describes request schemas.
+This release changes submission and interview-evaluation contracts. Old clients sending question text or answer keys must update to session IDs. The included frontend uses the new contracts.
 
-<details>
-<summary>Example: generate a mock test</summary>
+Errors include 401 for invalid/expired authentication, 404 for missing or unowned sessions, 409 for conflicting saves or active processing, 422 for invalid input, 429 for quota exhaustion, and 503 for unavailable providers or database operations. Resume uploads also use 413 for oversized files and 415 for unsupported types.
 
-With a provider configured and the API running:
+## Grading and AI behavior
 
-```bash
-curl -X POST http://localhost:8000/api/generate-test \
-  -H 'Content-Type: application/json' \
-  -d '{"purpose":"Placement preparation","subject":"Python","difficulty":"medium","testType":"conceptual","timeLimit":30}'
-```
+Multiple-choice answers use the saved answer key. Blank answers are incorrect. Written and code answers receive meaning-based evaluation that accepts paraphrases and valid alternative implementations. Code is reasoned about by the model; it is **not executed**.
 
-The response contains a `questions` array. Questions include an `id`, `question`, and `correctAnswer`; multiple-choice questions also include `options`. `timeLimit` must be between 1 and 180 minutes.
+The server validates written-answer verdicts and derives the test score. Interview feedback uses a bounded integer score from 0–10, strengths, and improvement points. Invalid model output returns a recoverable error rather than a fabricated score.
 
-</details>
+The shared adapter gives Gemini a 15-second request timeout and one retry for handled temporary failures. Groq tries configured models with ten-second attempt timeouts, within a 55-second total call budget. The code's default Groq order is `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, then `qwen/qwen3.8-27b`. These are code defaults, not verified availability guarantees; configure supported model names for your account.
 
-## Testing and Quality
-
-Backend regression tests cover API validation, semantic grading prompts and report handling, score consistency, malformed or duplicate evaluations, provider retries and fallback order, timeouts, and database error responses. Equivalent-answer tests use mocked provider reports; they do not establish real-model grading accuracy.
-
-From the repository root with the virtual environment active:
+## Verification
 
 ```bash
-pip install pytest httpx
+pip install pytest
 python -m pytest Ai/tests -q
+npm test --prefix newmyapp
+npm run build --prefix newmyapp
 ```
 
-Frontend tests cover preserving selected answers after failed submission and retrying failed question generation:
+Backend tests cover authentication, ownership isolation, quotas, hidden answer keys, strict generation output, answer conflicts, grading leases and recovery, idempotent submissions, resume validation, semantic report handling, and provider fallback. Frontend tests cover retries, answer preservation, autosave, reload, navigation saves, duplicate generation prevention in StrictMode, feedback field rendering, and follow-ups.
+
+These tests use mocked providers and an in-memory MongoDB substitute. Local browser checks additionally exercised desktop/mobile UI flows with mocked API responses. Real MongoDB connectivity, provider access, and grading accuracy need environment-specific verification. The GitHub Actions workflow checks the Python 3.12 and Node 22 setup on pushes and pull requests.
+
+A small starter grading dataset covers paraphrases, alternative code, misconceptions, and answer prompt injection:
 
 ```bash
-cd newmyapp
-CI=true npm test -- --watchAll=false
-CI=true npm run build
+# Validate the dataset without provider calls:
+python Ai/evaluate_grading.py
+
+# Explicit live evaluation, using provider credits:
+python Ai/evaluate_grading.py --live --runs 3 --output .eval-results/grading.json
 ```
 
-These are the repository's test and build commands; no coverage percentage or current pass status is claimed here.
+Live runs report label agreement and latency, and exit unsuccessfully if any run falls below 90% agreement. The twelve starter cases are not a comprehensive or independently validated benchmark.
 
-## Vercel Deployment
+## Vercel deployment
 
-**Live application: [mock-interview-king-09.vercel.app](https://mock-interview-king-09.vercel.app/)**
+The existing project is hosted under [king-09 / mock-interview](https://vercel.com/king-09/mock-interview). Keep the Vercel root directory at the repository root.
 
-1. Import the GitHub repository into Vercel with the project root set to the repository root.
-2. Configure an AI provider key, `MONGODB_URI`, and `JWT_SECRET_KEY` in the appropriate deployment environments. Configure both provider keys to enable Gemini-to-Groq fallback.
-3. Set supported model overrides if the code defaults are unavailable to your provider account.
-4. Ensure MongoDB allows connections from the hosting environment, then deploy or redeploy after configuration changes.
-5. Check `/api/test`, then verify signup, login, question generation, answer submission, and direct refreshes of `/dashboard` and `/dashboardmain`.
+- The root `vercel-build` script installs locked frontend dependencies and builds `newmyapp/build`.
+- `vercel.json` routes `/api` to `api/index.py` and other paths to the React application.
+- Python dependencies include the PyMongo Async driver and pypdf; no additional hosted service is required for this release.
+- Keep MongoDB, AI, JWT, and optional model overrides in Vercel's server environment settings. No new secret is required for the delivered features.
+- After deployment, verify `/api/test` reports version `0.2.0`, then check sign-in, generation, autosave/reload, history, and grading.
 
-[`vercel.json`](vercel.json) defines the static React build and Python function. The root `vercel-build` script installs client dependencies with `--legacy-peer-deps` and builds `newmyapp/build`. [`api/index.py`](api/index.py) exposes the existing FastAPI app, with `Ai/**` included in the function. `/api` requests go to Python; other paths use filesystem assets or fall back to the React entrypoint for client routing.
+MongoDB Atlas must permit the hosting environment's outbound connections and use valid credentials. The driver retains certificate verification. A rule for your laptop alone does not permit Vercel connections.
 
-The client uses same-origin `/api` by default. Set `REACT_APP_API_BASE_URL` only when a different API origin is needed. Deployment does not provision MongoDB or configure AI access automatically.
+## Next development
 
-<details>
-<summary>Troubleshooting MongoDB Atlas</summary>
+See the [roadmap](docs/development-roadmap.md) for live grading evaluations, opt-in AI tracing, richer historical analytics, knowledge retrieval, streaming LiveKit voice, and sandboxed Judge0 coding practice. Streaming voice requires an agent worker; code execution requires a separate execution service. Those integrations are not included in this release.
 
-If account operations return database-unavailable errors, check that the cluster is running, the URI and database credentials are correct, and Atlas Network Access permits the hosting environment's outbound connections. A rule for your laptop alone does not permit Vercel.
+Current limitations include browser-dependent voice support, local-storage JWTs with sign-in required after expiration, short autosave debounce windows, no account-data deletion UI, and AI-dependent judgments. Topic suggestions summarize the current interview; cross-session skill mastery is not inferred.
 
-URL-encode special characters in database passwords. Redeploy after changing hosting environment variables. The backend uses certifi roots for Atlas and keeps TLS verification enabled; connectivity failures return a friendly HTTP 503 response without driver connection details.
+## Contributing and license
 
-</details>
+Run the relevant tests and build, keep changes focused, and explain behavior and validation in pull requests. Never commit real credentials.
 
-## Engineering Decisions
+No license is currently declared. No MIT or other open-source license is implied.
 
-| Challenge | Implemented solution | Practical boundary |
-| --- | --- | --- |
-| AI overload or provider failure | Shared async service with bounded retry, ordered fallback, and a total request budget | Requires valid credentials and accessible models |
-| Equivalent written answers | Semantic grading prompt accepts paraphrases and alternative correct implementations | AI judgments can still be wrong; code is not executed |
-| Conflicting scores and feedback | Validate evaluation IDs and types, then derive score and counts on the server | Does not independently verify the model's technical reasoning |
-| Failed submissions losing progress | Keep mock-test answers in React state and expose retry controls | Refreshing or leaving the page can lose the session |
-| React and Python under one origin | Vercel API routing plus SPA fallback | Hosting configuration and runtime compatibility still require deployment checks |
-| Account database outages | Bounded database timeouts, CA configuration, and sanitized error responses | Network access and credentials must be configured externally |
-
-## Limitations and Future Work
-
-**Current limitations**
-
-- MongoDB stores accounts; test and interview history is not persisted.
-- Login and signup issue JWTs, but practice API routes do not validate them. The client stores account information and tokens in local storage.
-- Submitted test questions and answer keys come from the client; this is a practice workflow, not a tamper-resistant examination system.
-- Question counts are prompt instructions rather than strictly enforced counts. Question parsing is more permissive than semantic-grade validation.
-- Semantic grading depends on AI and has no published evaluation benchmark. Generated code answers are not executed.
-- Voice input and output depend on browser support and microphone access.
-- The inherited Create React App toolchain includes older dependencies; dependency modernization remains separate work.
-- Model names and access must be verified against your provider account. The repository does not pin Node/Python versions or most Python dependency versions.
-
-**Potential enhancements — not implemented**
-
-Persistent session history, performance analytics, personalized recommendations, richer speech workflows, session dashboards, JWT enforcement and rate limiting, server-owned assessment data, grading benchmarks, and dependency modernization.
-
-**Credential hygiene:** The previous README records that a Gemini credential appeared in earlier source history. Treat any historical credential as compromised and revoke it before enabling AI access. Keep replacement keys only in server environment settings.
-
-## Project Structure
-
-```text
-Mock-Interview/
-├── Ai/
-│   ├── main.py                 # FastAPI setup, CORS, routers, database errors
-│   ├── ai_service.py           # Gemini/Groq selection, retries, time budgets
-│   ├── grading.py              # Semantic report validation and scoring
-│   ├── database.py             # MongoDB client and TLS configuration
-│   ├── routers/
-│   │   ├── auth.py             # Signup and login
-│   │   ├── tests.py            # Mock-test generation and submission
-│   │   └── interview.py        # Interview questions and feedback
-│   ├── tests/                  # Backend regression tests
-│   ├── .env.example            # Server configuration template
-│   └── requirements.txt        # API dependency list
-├── api/
-│   └── index.py                # Vercel Python entrypoint
-├── newmyapp/
-│   ├── public/                 # Static assets
-│   ├── src/
-│   │   ├── components/         # Landing, auth, tests, interviews, results
-│   │   ├── services/api.js     # Mock-test API client and base URL
-│   │   ├── App.js              # Browser routes
-│   │   ├── App.test.js         # Retry and answer-preservation tests
-│   │   └── index.js            # React entrypoint
-│   ├── .env.example            # Client configuration template
-│   ├── package.json           # Client dependencies and scripts
-│   └── tailwind.config.js      # Styling configuration
-├── package.json               # Root build scripts
-├── requirements.txt           # Deployment/backend dependencies
-├── vercel.json                # Build and routing configuration
-└── README.md
-```
-
-## Author
-
-**[Priyanshu Raj](https://github.com/Priyanshuraj0909)** — Developer of Mock Interview, combining React interfaces, Python APIs, and generative AI for technical interview practice.
-
-## Contributing and License
-
-Open an issue to describe a bug or proposed improvement. For a contribution, create a branch, keep changes focused, run the relevant checks above, and submit a pull request explaining the behavior and validation. Include screenshots for interface changes and keep credentials out of commits.
-
-This repository currently has **no declared license**. No MIT or other open-source license is implied.
+Author: [Priyanshu Raj](https://github.com/Priyanshuraj0909)

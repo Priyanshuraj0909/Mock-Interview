@@ -68,23 +68,26 @@ def test_both_providers_failing_returns_friendly_retry(monkeypatch):
     assert 'private-provider-detail' not in error.value.detail
 
 
-def test_provider_503_is_preserved_by_all_routes():
+def test_provider_503_is_preserved_by_all_routes(database, signed_in):
     from fastapi.testclient import TestClient
     from main import app
     from routers import tests, interview
+    from test_api import new_test, new_interview
+    test_session = new_test(signed_in)
+    interview_session = new_interview(signed_in)
     model = SimpleNamespace(generate_content=AsyncMock(side_effect=HTTPException(status_code=503, detail='Temporarily busy', headers={'Retry-After': '10'})))
     app.dependency_overrides[tests.get_model] = lambda: model
     app.dependency_overrides[interview.get_model] = lambda: model
     params = {'purpose': 'practice', 'subject': 'React', 'difficulty': 'medium', 'testType': 'conceptual', 'timeLimit': 30}
     requests = [
         ('/api/generate-test', params),
-        ('/api/submit-answers', {'testParams': params, 'questions': [{'id': 1, 'question': 'Question', 'correctAnswer': 'A'}], 'answers': {'1': 'A'}}),
+        ('/api/submit-answers', {'sessionId': test_session['sessionId'], 'answers': {'1': 'A'}}),
         ('/api/interview/generate-questions', {'interviewType': 'frontend_developer'}),
-        ('/api/interview/evaluate-answer', {'interviewType': 'frontend_developer', 'question': 'Question', 'answer': 'Answer'}),
+        ('/api/interview/evaluate-answer', {'sessionId': interview_session['sessionId'], 'questionId': 1, 'answer': 'Answer'}),
     ]
     try:
         for path, payload in requests:
-            response = TestClient(app).post(path, json=payload)
+            response = TestClient(app).post(path, headers=signed_in, json=payload)
             assert response.status_code == 503
             assert response.headers['retry-after'] == '10'
             assert response.json()['detail'] == 'Temporarily busy'

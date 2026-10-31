@@ -15,12 +15,23 @@ PARAMS = {'purpose': 'practice', 'subject': 'DSA & C++', 'difficulty': 'medium',
 
 def submit(questions, answers, report):
     model = SimpleNamespace(generate_content=AsyncMock(return_value=SimpleNamespace(text=json.dumps(report))))
+    from conftest import MemoryDatabase
+    from database import get_database
+    from security import require_ai_quota
+    from session_store import utcnow
+    db = MemoryDatabase()
+    db['sessions'].documents.append({'_id': 'grade-test', 'userId': 'test-user', 'kind': 'test',
+        'params': PARAMS, 'questions': questions, 'answers': {}, 'evaluations': {},
+        'status': 'in_progress', 'revision': 0, 'createdAt': utcnow()})
+    app.dependency_overrides[get_database] = lambda: db
+    app.dependency_overrides[require_ai_quota] = lambda: 'test-user'
     app.dependency_overrides[tests.get_model] = lambda: model
     try:
-        response = TestClient(app).post('/api/submit-answers', json={'testParams': PARAMS, 'questions': questions, 'answers': answers})
+        response = TestClient(app).post('/api/submit-answers', json={'sessionId': 'grade-test', 'answers': answers})
         return response, model
     finally:
         app.dependency_overrides.clear()
+
 
 
 def test_paraphrase_and_equivalent_code_use_semantic_verdicts():

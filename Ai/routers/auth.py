@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+import asyncio
 import os
 from typing import Any, Dict
 
@@ -6,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from jose import jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
 from database import get_database
@@ -26,17 +27,24 @@ class SignupRequest(BaseModel):
     purpose: str = Field(..., min_length=1, max_length=100)
     password: str = Field(..., min_length=8, max_length=72)
 
+    @field_validator("password")
+    @classmethod
+    def password_byte_limit(cls, value):
+        if len(value.encode("utf-8")) > 72:
+            raise ValueError("Password must be at most 72 UTF-8 bytes")
+        return value
+
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=1, max_length=72)
 
 
 def _create_access_token(data: Dict[str, Any]) -> str:
     if not SECRET_KEY or len(SECRET_KEY) < 32:
         raise HTTPException(status_code=503, detail="Authentication is not configured. Set a JWT_SECRET_KEY of at least 32 characters.")
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -64,13 +72,13 @@ async def signup(payload: SignupRequest, db=Depends(get_database)):
             content={"success": False, "message": "Email already registered"},
         )
 
-    hashed_password = pwd_context.hash(payload.password)
+    hashed_password = await asyncio.to_thread(pwd_context.hash, payload.password)
     user_doc = {
         "name": payload.name.strip(),
         "email": normalized_email,
         "purpose": payload.purpose,
         "password_hash": hashed_password,
-        "created_at": datetime.utcnow(),
+        "created_at": datetime.now(timezone.utc),
     }
 
     try:
@@ -100,7 +108,7 @@ async def login(payload: LoginRequest, db=Depends(get_database)):
     normalized_email = payload.email.lower()
 
     user = await users_collection.find_one({"email": normalized_email})
-    if not user or not pwd_context.verify(payload.password, user.get("password_hash", "")):
+    if not user or not await asyncio.to_thread(pwd_context.verify, payload.password, user.get("password_hash", "")):
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"success": False, "message": "Invalid email or password"},

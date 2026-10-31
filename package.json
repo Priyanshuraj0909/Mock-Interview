@@ -3,6 +3,9 @@
   "private": true,
   "scripts": {
     "build": "npm run build --prefix newmyapp",
-    "vercel-build": "npm ci --prefix newmyapp --legacy-peer-deps && npm run build --prefix newmyapp"
+    "vercel-build": "npm ci --prefix newmyapp && npm run build --prefix newmyapp"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
