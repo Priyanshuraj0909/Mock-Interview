@@ -24,7 +24,7 @@ class ResetPassword(BaseModel):
 async def verify_password(db, user_id, password):
     user = await db["users"].find_one({"_id": ObjectId(user_id)})
     if not user or not await asyncio.to_thread(pwd_context.verify, password, user.get("password_hash", "")):
-        raise HTTPException(401, "Password is incorrect.")
+        raise HTTPException(403, "Password is incorrect.")
     return user
 
 @router.post("/refresh")

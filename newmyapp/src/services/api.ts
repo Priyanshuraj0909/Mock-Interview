@@ -84,7 +84,8 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}, retry 
   const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers, credentials: "include" });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    if (response.status === 401 && !path.startsWith('/auth/')) {
+    const canRefresh = !['/auth/login', '/auth/signup', '/auth/reset-password', '/auth/refresh', '/auth/logout'].includes(path);
+    if (response.status === 401 && canRefresh) {
       if (retry && await renewSession()) return apiRequest<T>(path, init, false);
       logout();
     }

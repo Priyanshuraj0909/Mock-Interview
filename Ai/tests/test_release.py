@@ -49,9 +49,9 @@ def test_recovery_and_deletion_require_password_and_remove_only_owner(database):
         headers = signup(client)
         owner = str(database['users'].documents[0]['_id'])
         database['sessions'].documents.extend([{'_id': 'mine', 'userId': owner}, {'_id': 'theirs', 'userId': 'other'}])
-        assert client.post('/api/auth/delete-account', headers=headers, json={'password': 'wrong'}).status_code == 401
+        assert client.post('/api/auth/delete-account', headers=headers, json={'password': 'wrong'}).status_code == 403
         assert len(database['users'].documents) == 1
-        assert client.post('/api/auth/recovery-code', headers=headers, json={'password': 'wrong'}).status_code == 401
+        assert client.post('/api/auth/recovery-code', headers=headers, json={'password': 'wrong'}).status_code == 403
         assert client.post('/api/auth/delete-account', headers=headers, json={'password': 'test-password'}).status_code == 200
         assert database['sessions'].documents == [{'_id': 'theirs', 'userId': 'other'}]
         assert not database['users'].documents
