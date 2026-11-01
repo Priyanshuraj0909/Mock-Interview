@@ -133,3 +133,21 @@ def test_new_private_endpoints_require_authentication(database):
         assert client.get('/api/analytics').status_code == 401
         for endpoint in ['recovery-code', 'delete-account']:
             assert client.post('/api/auth/' + endpoint, json={'password': 'test-password'}).status_code == 401
+
+
+def test_abandoned_smoke_cleanup_is_bounded_and_preserves_regular_accounts(database):
+    from datetime import datetime, timezone
+    from release_migrations import cleanup_abandoned_smoke_account
+    marker = {'name': 'Release verification', 'purpose': 'Deployment verification', 'created_at': datetime(2026, 11, 1, 7, 41, tzinfo=timezone.utc)}
+    abandoned, ordinary, future = ObjectId(), ObjectId(), ObjectId()
+    database['users'].documents.extend([
+        {**marker, '_id': abandoned, 'email': 'release-0123456789abcdef@example.com'},
+        {**marker, '_id': ordinary, 'email': 'person@example.com'},
+        {**marker, '_id': future, 'email': 'release-aaaaaaaaaaaaaaaa@example.com', 'created_at': datetime(2026, 11, 1, 8, tzinfo=timezone.utc)},
+    ])
+    database['sessions'].documents.extend([{'_id': 'test', 'userId': str(abandoned)}, {'_id': 'normal', 'userId': str(ordinary)}])
+    asyncio.run(cleanup_abandoned_smoke_account(database))
+    assert {row['_id'] for row in database['users'].documents} == {ordinary, future}
+    assert database['sessions'].documents == [{'_id': 'normal', 'userId': str(ordinary)}]
+    asyncio.run(cleanup_abandoned_smoke_account(database))
+    assert len(database['maintenance'].documents) == 1

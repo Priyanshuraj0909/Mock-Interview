@@ -224,7 +224,10 @@ python scripts/verify-release.py --allow-create-account
 python scripts/verify-release.py --allow-create-account --live-ai
 ```
 
-The script removes its disposable account and practice data in a cleanup step. It does not report
+The script removes its disposable account and practice data in a cleanup step. During a run it keeps
+only its synthetic account credentials in an ignored, mode-0600 file at `.eval-results/release-account.json`;
+successful cleanup removes that file. If cleanup fails, retry with `--cleanup-only`. Use `--ipv4` if
+your machine has broken IPv6 routing. It does not report
 live grading accuracy; run the dedicated benchmark with configured provider keys for that measurement.
 
 ## Vercel deployment

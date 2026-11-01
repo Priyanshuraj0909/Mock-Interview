@@ -45,7 +45,10 @@ def get_database_name() -> str:
 async def get_database():
     if not (os.getenv("MONGODB_URI") or os.getenv("MONGO_URL")):
         raise HTTPException(status_code=503, detail="Accounts are not configured. Set MONGODB_URI on the server.")
-    return get_client()[get_database_name()]
+    db = get_client()[get_database_name()]
+    from release_migrations import cleanup_abandoned_smoke_account
+    await cleanup_abandoned_smoke_account(db)
+    return db
 
 
 async def connect_to_mongo():

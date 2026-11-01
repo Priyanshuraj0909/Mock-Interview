@@ -14,7 +14,10 @@ router = APIRouter(prefix="/api/auth", tags=["account"])
 
 class PasswordCheck(BaseModel):
     password: str = Field(min_length=1, max_length=72)
-    _password_bytes = field_validator("password")(SignupRequest.password_byte_limit)
+    @field_validator("password")
+    @classmethod
+    def valid_password_bytes(cls, value):
+        return SignupRequest.password_byte_limit(value)
 
 class ResetPassword(BaseModel):
     email: EmailStr

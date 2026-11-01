@@ -28,8 +28,14 @@ def matches(document, query):
             for operation, value in expected.items():
                 if operation == '$exists' and (actual is not None) != value:
                     return False
-                if operation not in {'$exists', '$lt'}:
+                if operation not in {'$exists', '$lt', '$gte', '$regex'}:
                     raise AssertionError(f'Unsupported test query operator: {operation}')
+                if operation == '$gte' and (actual is None or actual < value):
+                    return False
+                if operation == '$regex':
+                    import re
+                    if not isinstance(actual, str) or not re.search(value, actual):
+                        return False
                 if operation == '$lt' and (actual is None or actual >= value):
                     return False
         elif actual != expected:
