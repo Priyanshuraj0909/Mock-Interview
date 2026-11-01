@@ -28,6 +28,8 @@ def matches(document, query):
             for operation, value in expected.items():
                 if operation == '$exists' and (actual is not None) != value:
                     return False
+                if operation not in {'$exists', '$lt'}:
+                    raise AssertionError(f'Unsupported test query operator: {operation}')
                 if operation == '$lt' and (actual is None or actual >= value):
                     return False
         elif actual != expected:
@@ -90,6 +92,17 @@ class MemoryCollection:
             document.pop(key, None)
         if inserted:
             document.update(copy.deepcopy(update.get('$setOnInsert', {})))
+        return copy.deepcopy(document)
+
+    async def delete_many(self, query):
+        before = len(self.documents)
+        self.documents = [doc for doc in self.documents if not matches(doc, query)]
+        return SimpleNamespace(deleted_count=before - len(self.documents))
+
+    async def find_one_and_delete(self, query):
+        document = next((doc for doc in self.documents if matches(doc, query)), None)
+        if document is not None:
+            self.documents.remove(document)
         return copy.deepcopy(document)
 
     async def update_one(self, query, update):

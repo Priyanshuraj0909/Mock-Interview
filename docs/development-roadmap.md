@@ -14,13 +14,24 @@
 - Vitest/pytest regression coverage and GitHub Actions test/build checks.
 - A starter dataset and CLI for measuring actual grading behavior.
 
+## Delivered in version 0.3.0
+
+- Personal score trends grouped by practice type, subject/role, and difficulty.
+- Interview topic priorities using latest scores for distinct normalized questions; follow-ups excluded.
+- Password-confirmed recovery-code generation, single-use password resets, and token revocation.
+- Rotating opaque 30-day refresh cookies with HttpOnly, SameSite Strict and production Secure flags.
+- Password-confirmed account and practice-data deletion.
+- Authentication attempt limits and opt-in metadata-only provider/request logs.
+- 36 synthetic evaluation cases, bounded grading batches, role breakdowns, and model configuration in reports.
+- Disposable-account production smoke script covering real persistence and optional live AI flows.
+
 ## Next release: measure and improve personalization
 
-- Expand the evaluation dataset with human-reviewed examples per role and difficulty.
+- Obtain independent human review of synthetic evaluation labels and expand role coverage.
 - Run the live benchmark against supported Gemini/Groq models and publish results with model configuration.
 - Add opt-in Langfuse tracing with resume/answer redaction; collect latency, token usage, fallback rate, and scoring failures.
-- Add historical topic analytics across sessions, distinguishing repeated questions from independent evidence.
-- Add account data deletion, configurable retention, and refresh-token/session lifecycle improvements.
+- Extend historical analytics beyond the latest 100 sessions and detect semantic duplicate questions.
+- Add email-based recovery with a verified delivery service and configurable data retention.
 - Add source-grounded study material. Start with a curated collection and MongoDB Vector Search only when document volume warrants retrieval.
 
 ## Voice release

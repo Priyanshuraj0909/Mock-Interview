@@ -1,6 +1,7 @@
 """Private session persistence, optimistic autosaves, and expiring grading leases."""
 from datetime import datetime, timezone, timedelta
 from uuid import uuid4
+from bson import ObjectId
 
 from fastapi import HTTPException
 from pymongo import ReturnDocument
@@ -18,6 +19,10 @@ async def create_session(db, user_id, kind, params, questions):
     if kind == "test":
         session["deadlineAt"] = now + timedelta(minutes=params["timeLimit"])
     await db["sessions"].insert_one(session)
+    owner = await db["users"].find_one({"_id": ObjectId(user_id)})
+    if not owner or owner.get("deleting"):
+        await db["sessions"].delete_many({"_id": session["_id"], "userId": user_id})
+        raise HTTPException(401, "This account is no longer available.")
     return session
 
 

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from time import perf_counter
 from types import SimpleNamespace
+from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 from pydantic import BaseModel, ConfigDict, Field, StrictBool
@@ -16,6 +17,8 @@ from grading import grade_submission
 class Case(BaseModel):
     model_config = ConfigDict(extra="forbid")
     id: str = Field(min_length=1)
+    role: str = "software-engineering"
+    difficulty: str = "medium"
     question: str = Field(min_length=1)
     reference: str = Field(min_length=1)
     answer: str = Field(min_length=1)
@@ -31,23 +34,36 @@ def load_cases(path):
 
 async def evaluate(cases, runs):
     model = configure_genai()
-    submission = SimpleNamespace(
-        testParams=SimpleNamespace(subject="Technical interview fundamentals", difficulty="medium"),
-        questions=[{"id": i, "question": case.question, "correctAnswer": case.reference} for i, case in enumerate(cases, 1)],
-        answers={str(i): case.answer for i, case in enumerate(cases, 1)},
-    )
     results = []
+    # Bounded batches avoid truncating the provider's structured report.
     for run in range(runs):
         started = perf_counter()
-        report = await grade_submission(submission, model)
-        verdicts = [item["correct"] for item in report["questionAnalysis"]]
-        comparisons = [{"id": case.id, "expected": case.expectedCorrect, "actual": verdict}
-                       for case, verdict in zip(cases, verdicts)]
+        comparisons = []
+        for offset in range(0, len(cases), 6):
+            batch = cases[offset:offset + 6]
+            submission = SimpleNamespace(
+                testParams=SimpleNamespace(subject="Technical interview fundamentals", difficulty="medium"),
+                questions=[{"id": i, "question": case.question, "correctAnswer": case.reference} for i, case in enumerate(batch, 1)],
+                answers={str(i): case.answer for i, case in enumerate(batch, 1)},
+            )
+            report = await grade_submission(submission, model)
+            verdicts = [item["correct"] for item in report["questionAnalysis"]]
+            if len(verdicts) != len(batch):
+                raise ValueError("Grader returned an incomplete report")
+            comparisons.extend({"id": case.id, "role": case.role, "difficulty": case.difficulty,
+                                "expected": case.expectedCorrect, "actual": verdict}
+                               for case, verdict in zip(batch, verdicts))
         results.append({"run": run + 1, "latencySeconds": round(perf_counter() - started, 2),
                         "agreement": sum(item["expected"] == item["actual"] for item in comparisons) / len(cases),
                         "cases": comparisons})
     return {"caseCount": len(cases), "runs": results,
-            "note": "Small starter dataset, not an independent or comprehensive grading benchmark."}
+            "recordedAt": datetime.now(timezone.utc).isoformat(),
+            "configuration": {"geminiModel": model.name if model.api_key else None,
+                              "groqModels": model.groq_models if model.groq_key else []},
+            "byRole": {role: {"cases": sum(c.role == role for c in cases),
+                                "agreement": sum(item["expected"] == item["actual"] for run in results for item in run["cases"] if item["role"] == role) / (runs * sum(c.role == role for c in cases))}
+                       for role in sorted({c.role for c in cases})},
+            "note": "Synthetic starter examples; labels need independent human review. Not a comprehensive benchmark."}
 
 
 def main():

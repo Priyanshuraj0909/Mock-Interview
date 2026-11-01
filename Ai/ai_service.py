@@ -2,6 +2,8 @@
 import asyncio
 import logging
 import os
+from time import perf_counter
+from telemetry import emit
 from dataclasses import dataclass
 
 import httpx
@@ -59,8 +61,13 @@ class GeminiModel:
                     text = response.choices[0].message.content if response.choices else None
                     if not text or not text.strip():
                         raise ValueError("Empty AI response")
+                    usage = getattr(response, "usage", None)
+                    emit("ai_attempt", provider="groq", model=model_name, success=True,
+                         inputTokens=getattr(usage, "prompt_tokens", None), outputTokens=getattr(usage, "completion_tokens", None),
+                         fallback=bool(self.api_key) or model_name != self.groq_models[0])
                     return AIResponse(text=text)
                 except (GroqAPIError, httpx.TransportError, ValueError, TimeoutError) as exc:
+                    emit("ai_attempt", provider="groq", model=model_name, success=False, fallback=bool(self.api_key) or model_name != self.groq_models[0])
                     logger.warning("Groq model %s failed (%s)", model_name, type(exc).__name__)
                     # A rejected API key affects every model; do not repeat it.
                     if getattr(exc, "status_code", None) == 401:
@@ -68,12 +75,15 @@ class GeminiModel:
         raise ValueError("Groq models exhausted")
 
     async def generate_content(self, prompt):
+        started = perf_counter()
         try:
             async with asyncio.timeout(AI_REQUEST_TIMEOUT):
                 return await self._generate_content(prompt)
         except TimeoutError:
             logger.warning("AI request time budget exhausted")
             raise self._unavailable()
+        finally:
+            emit("ai_call", latencyMs=round((perf_counter() - started) * 1000))
 
     @staticmethod
     def _unavailable():
@@ -90,8 +100,12 @@ class GeminiModel:
                     response = await self._generate_gemini(prompt)
                     if not response.text or not response.text.strip():
                         raise ValueError("Empty AI response")
+                    usage = getattr(response, "usage_metadata", None)
+                    emit("ai_attempt", provider="gemini", model=self.name, success=True, fallback=False,
+                         inputTokens=getattr(usage, "prompt_token_count", None), outputTokens=getattr(usage, "candidates_token_count", None))
                     return response
                 except (errors.APIError, httpx.TransportError, ValueError) as exc:
+                    emit("ai_attempt", provider="gemini", model=self.name, success=False, fallback=False)
                     code = getattr(exc, "code", None)
                     transient = code in TRANSIENT_CODES or isinstance(exc, httpx.TransportError)
                     logger.warning("Gemini request failed (%s); attempt %d", type(exc).__name__, attempt + 1)

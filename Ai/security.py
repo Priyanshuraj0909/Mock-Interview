@@ -35,7 +35,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(r
     except (JWTError, ValueError, TypeError):
         raise unauthorized from None
     user = await db["users"].find_one({"_id": ObjectId(subject)})
-    if not user:
+    if not user or user.get("deleting") or claims.get("ver", 0) != user.get("tokenVersion", 0):
         raise unauthorized
     return str(user["_id"])
 

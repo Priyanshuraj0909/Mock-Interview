@@ -11,6 +11,8 @@ export default function PracticeNav({ title }: { title: string }) {
       <nav aria-label="Practice navigation" className="flex flex-wrap items-center gap-4 text-sm">
         <Link to="/dashboard" className="hover:text-blue-300">Mock tests</Link>
         <Link to="/dashboardmain" className="hover:text-blue-300">Interview studio</Link>
+        <Link to="/progress" className="hover:text-blue-300">Progress</Link>
+        <Link to="/account" className="hover:text-blue-300">Account</Link>
         <Link to="/history" className="flex items-center gap-1 hover:text-blue-300"><History size={16} /> History</Link>
         <button onClick={() => { logout(); navigate('/login'); }} className="flex items-center gap-1 text-gray-400 hover:text-white"><LogOut size={16} /> Sign out</button>
       </nav>

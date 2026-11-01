@@ -16,6 +16,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt pytest
       - run: python -m pytest Ai/tests -q
+      - run: python Ai/evaluate_grading.py
   frontend:
     runs-on: ubuntu-latest
     steps:

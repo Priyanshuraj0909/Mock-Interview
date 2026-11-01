@@ -29,5 +29,8 @@
       "src": "/.*",
       "dest": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "AI_TELEMETRY_ENABLED": "true"
+  }
 }

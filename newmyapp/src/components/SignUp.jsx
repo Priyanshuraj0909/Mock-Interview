@@ -52,7 +52,7 @@ const Signup = () => {
         email, 
         purpose, 
         password 
-      });
+      }, { withCredentials: true });
       if (response.data.success) {
         setMessage(response.data.message);
         localStorage.setItem('token', response.data.token);

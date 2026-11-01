@@ -23,10 +23,25 @@ React 19 · Vite · TypeScript · FastAPI · MongoDB · Gemini / Groq
 | Saved practice | Answers autosave after a short typing pause. Reopen sessions from History, including completed reports. |
 | Feedback and study priorities | Review scores, strengths, specific improvement points, and topic-level practice suggestions. |
 | Browser voice | Read questions aloud or dictate answers where browser support and microphone access permit. |
-| Accounts | Sign up and sign in with password hashes and expiring JWTs. All practice APIs verify authentication and session ownership. |
+| Accounts | Sign up and sign in with password hashes, expiring JWTs, and rotating 30-day refresh cookies. Save a recovery code, reset a forgotten password, or permanently delete your account and practice data. |
+| Progress | Compare score history within the same practice type, subject/role, and difficulty. Interview topic priorities use distinct original questions and exclude follow-ups. |
 | AI resilience | Bounded Gemini retries, ordered Groq fallback, strict output validation, and recoverable failure messages. |
 
 The interview studio and mock-test screens are accessible after sign-in. AI generation, evaluation, follow-up, and resume extraction requests share a database-backed per-user limit, defaulting to 20 requests per minute. History and autosaves do not consume that quota.
+
+## Version 0.3.0
+
+Adds `/progress` and `/account`, recovery-code password resets, rotating HttpOnly refresh cookies,
+account deletion, opt-in structured operational logs, and 36 synthetic grading examples across roles
+and difficulty levels. Save a recovery code in Account settings before you need password recovery;
+email delivery is not configured. Resetting a password consumes the code and revokes earlier tokens.
+Refresh sessions rotate on use and expire after 30 days; signed-out access tokens can remain valid
+until their existing expiry. Recovery codes and refresh tokens are stored only as hashes.
+
+Operational metrics are enabled in the Vercel configuration and disabled by default locally.
+Logs contain route templates, status, duration, configured provider/model, fallback use, and token
+counts where supplied by the provider. They contain no prompts, resume text, answers, cookies,
+account IDs, or email addresses. Token counts support cost analysis; no billing estimate is fabricated.
 
 ## Interface preview
 
@@ -126,6 +141,7 @@ On Windows, activate the environment with `.venv\Scripts\activate` and use your 
 | `JWT_SECRET_KEY` | Required server secret, at least 32 characters |
 | `JWT_ALGORITHM` | Symmetric signing algorithm; `HS256` by default |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Token lifetime; `60` |
+| `AI_TELEMETRY_ENABLED` | Opt-in structured operational logs; `false` locally, enabled by `vercel.json` |
 | `AI_REQUESTS_PER_MINUTE` | Shared per-user request limit; `20` |
 | `CORS_ORIGINS` | Comma-separated browser origins; `http://localhost:3000` |
 | `VITE_API_BASE_URL` | Public client API base; `/api` |
@@ -133,7 +149,7 @@ On Windows, activate the environment with `.venv\Scripts\activate` and use your 
 
 Server credentials belong only in server environment settings. Client variables are public build-time configuration. The original resume file is not stored; extracted text is saved privately with the interview and sent to the configured AI provider. Browser voice input may use the browser vendor's speech service.
 
-MongoDB holds `users`, `sessions`, and `rate_limits`. Startup creates the unique user email index, the session owner/time index, and a TTL index for quota buckets. No migration of existing account documents is required; existing bcrypt hashes remain supported.
+MongoDB holds `users`, `sessions`, `refresh_tokens`, and `rate_limits`. Startup creates the unique user email index, the session owner/time index, and a TTL index for quota buckets. No migration of existing account documents is required; existing bcrypt hashes remain supported.
 
 The repository previously documented a credential in source history. Revoke any such historical credential and keep replacement keys out of Git.
 
@@ -145,6 +161,12 @@ All practice endpoints require `Authorization: Bearer <token>`. Signup, login, a
 | --- | --- | --- |
 | POST | `/api/auth/signup` | Create an account and issue a JWT |
 | POST | `/api/auth/login` | Sign in and issue a JWT |
+| POST | `/api/auth/refresh` | Rotate a valid refresh cookie and issue a new access token |
+| POST | `/api/auth/logout` | Revoke the current refresh token and clear its cookie |
+| POST | `/api/auth/recovery-code` | Create a replacement recovery code after password confirmation |
+| POST | `/api/auth/reset-password` | Reset with email and a saved one-time recovery code; revoke prior tokens |
+| POST | `/api/auth/delete-account` | Confirm password and delete the account and owned practice data |
+| GET | `/api/analytics` | Private score trends and deduplicated topic evidence from up to 100 sessions |
 | GET | `/api/test` | API health and release version; does not verify MongoDB or provider access |
 | POST | `/api/generate-test` | Generate and save ten questions; return a private session without answer keys |
 | POST | `/api/submit-answers` | Grade `{sessionId, answers}` using server-owned questions |
@@ -192,7 +214,18 @@ python Ai/evaluate_grading.py
 python Ai/evaluate_grading.py --live --runs 3 --output .eval-results/grading.json
 ```
 
-Live runs report label agreement and latency, and exit unsuccessfully if any run falls below 90% agreement. The twelve starter cases are not a comprehensive or independently validated benchmark.
+Live runs report label agreement and latency, and exit unsuccessfully if any run falls below 90% agreement. The 36 synthetic starter cases are not a comprehensive or independently validated benchmark.
+
+A disposable-account smoke check verifies real MongoDB and authentication after deployment:
+
+```bash
+python scripts/verify-release.py --allow-create-account
+# Also exercise live provider generation/grading (uses provider credits):
+python scripts/verify-release.py --allow-create-account --live-ai
+```
+
+The script removes its disposable account and practice data in a cleanup step. It does not report
+live grading accuracy; run the dedicated benchmark with configured provider keys for that measurement.
 
 ## Vercel deployment
 
@@ -202,7 +235,7 @@ The existing project is hosted under [king-09 / mock-interview](https://vercel.c
 - `vercel.json` routes `/api` to `api/index.py` and other paths to the React application.
 - Python dependencies include the PyMongo Async driver and pypdf; no additional hosted service is required for this release.
 - Keep MongoDB, AI, JWT, and optional model overrides in Vercel's server environment settings. No new secret is required for the delivered features.
-- After deployment, verify `/api/test` reports version `0.2.0`, then check sign-in, generation, autosave/reload, history, and grading.
+- After deployment, verify `/api/test` reports version `0.3.0`, then check sign-in, generation, autosave/reload, history, and grading.
 
 MongoDB Atlas must permit the hosting environment's outbound connections and use valid credentials. The driver retains certificate verification. A rule for your laptop alone does not permit Vercel connections.
 
@@ -210,7 +243,7 @@ MongoDB Atlas must permit the hosting environment's outbound connections and use
 
 See the [roadmap](docs/development-roadmap.md) for live grading evaluations, opt-in AI tracing, richer historical analytics, knowledge retrieval, streaming LiveKit voice, and sandboxed Judge0 coding practice. Streaming voice requires an agent worker; code execution requires a separate execution service. Those integrations are not included in this release.
 
-Current limitations include browser-dependent voice support, local-storage JWTs with sign-in required after expiration, short autosave debounce windows, no account-data deletion UI, and AI-dependent judgments. Topic suggestions summarize the current interview; cross-session skill mastery is not inferred.
+Current limitations include browser-dependent voice support, local-storage access JWTs, short autosave debounce windows, recovery-code-only password resets, and AI-dependent judgments. Refresh cookies assume same-site hosting; a cross-site API needs an explicit cookie/CSRF design. Cross-session topic evidence is limited to the latest 100 sessions and does not establish skill mastery. Identical normalized questions count once per role/difficulty/topic; semantic duplicates may still count separately. Application account deletion does not control provider retention or hosting backups.
 
 ## Contributing and license
 
@@ -218,4 +251,4 @@ Run the relevant tests and build, keep changes focused, and explain behavior and
 
 No license is currently declared. No MIT or other open-source license is implied.
 
-Author: [Priyanshu Raj](https://github.com/Priyanshuraj0909)
+Author: [Priyanshu Raj](https://github.com/Priyanshuraj0909)  

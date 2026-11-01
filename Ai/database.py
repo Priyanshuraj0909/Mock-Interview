@@ -54,6 +54,8 @@ async def connect_to_mongo():
     try:
         await db["users"].create_index("email", unique=True)
         await db["sessions"].create_index([("userId", 1), ("createdAt", -1)])
+        await db["refresh_tokens"].create_index("expiresAt", expireAfterSeconds=0)
+        await db["refresh_tokens"].create_index("userId")
         await db["rate_limits"].create_index("expiresAt", expireAfterSeconds=0)
     except PyMongoError:
         # Index might already exist or creation failed; log/ignore for now

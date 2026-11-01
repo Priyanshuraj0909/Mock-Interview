@@ -99,4 +99,4 @@ async def submit_answers(data: AnswerSubmission, user_id=Depends(require_ai_quot
 
 @router.get("/test")
 async def test_endpoint():
-    return {"status": "ok", "message": "API is working", "version": "0.2.0"}
+    return {"status": "ok", "message": "API is working", "version": "0.3.0"}

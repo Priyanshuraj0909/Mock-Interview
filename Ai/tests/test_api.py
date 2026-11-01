@@ -211,7 +211,7 @@ def test_database_connection_failure_is_recoverable(monkeypatch):
     from routers import auth
     monkeypatch.setattr(auth, 'SECRET_KEY', 'test-secret-' * 4)
     collection = SimpleNamespace(find_one=AsyncMock(side_effect=ServerSelectionTimeoutError('SSL handshake failed: private-host')))
-    app.dependency_overrides[get_database] = lambda: {'users': collection}
+    app.dependency_overrides[get_database] = lambda: {'users': collection, 'rate_limits': SimpleNamespace(find_one_and_update=AsyncMock(side_effect=ServerSelectionTimeoutError('private-host')))}
     try:
         response = client.post('/api/auth/login', json={'email': 'test@example.com', 'password': 'test-password'})
         assert response.status_code == 503

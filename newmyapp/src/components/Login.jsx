@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 import { API_BASE_URL } from '../services/api';
 
@@ -27,7 +27,7 @@ const Login = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_BASE_URL}/auth/login`, formData);
+            const response = await axios.post(`${API_BASE_URL}/auth/login`, formData, { withCredentials: true });
             if (response.data.success) {
                 localStorage.setItem('token', response.data.token);
                 localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -113,6 +113,7 @@ const Login = () => {
                         </button>
                     </form>
 
+                    <p className="mt-5 text-center"><Link to="/reset-password" className="text-blue-300">Reset password with recovery code</Link></p>
                     <div className="mt-6 text-center text-sm text-gray-400">
                         Don't have an account?{' '}
                         <button

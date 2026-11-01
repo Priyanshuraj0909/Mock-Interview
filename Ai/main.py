@@ -11,7 +11,7 @@ import logging
 from fastapi.middleware.cors import CORSMiddleware
 from routers import tests
 from routers import interview
-from routers import auth, sessions, resume
+from routers import auth, sessions, resume, account, analytics
 
 from database import connect_to_mongo, close_mongo_connection
 
@@ -25,7 +25,7 @@ async def lifespan(app):
         await close_mongo_connection()
 
 
-app = FastAPI(title="Mock Interview API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Mock Interview API", version="0.3.0", lifespan=lifespan)
 logger = logging.getLogger(__name__)
 
 
@@ -53,6 +53,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth.router)
+app.include_router(account.router)
+app.include_router(analytics.router)
 app.include_router(sessions.router)
 app.include_router(resume.router)
 app.include_router(tests.router, prefix="/api")
@@ -62,3 +64,21 @@ app.include_router(interview.router, prefix="/api/interview", tags=["interview"]
 @app.get("/")
 def read_root():
     return {"message": "AI Mock Test API is running"}
+
+
+@app.middleware("http")
+async def operational_metrics(request: Request, call_next):
+    from time import perf_counter
+    from telemetry import emit
+    started = perf_counter()
+    status = 500
+    try:
+        response = await call_next(request)
+        status = response.status_code
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
+        return response
+    finally:
+        route = request.scope.get("route")
+        emit("http_request", operation=getattr(route, "path", "unmatched"), status=status,
+             success=status < 400, latencyMs=round((perf_counter() - started) * 1000))

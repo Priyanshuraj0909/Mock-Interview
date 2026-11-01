@@ -3,7 +3,7 @@ import asyncio
 import os
 from typing import Any, Dict
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
 from fastapi.responses import JSONResponse
 from jose import jwt
 from passlib.context import CryptContext
@@ -11,6 +11,7 @@ from pydantic import BaseModel, EmailStr, Field, field_validator
 from pymongo.errors import DuplicateKeyError
 
 from database import get_database
+from account_sessions import issue_refresh_cookie, auth_throttle
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -39,6 +40,8 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=72)
 
+    _password_bytes = field_validator("password")(SignupRequest.password_byte_limit)
+
 
 def _create_access_token(data: Dict[str, Any]) -> str:
     if not SECRET_KEY or len(SECRET_KEY) < 32:
@@ -59,7 +62,8 @@ def _serialize_user(user: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @router.post("/signup")
-async def signup(payload: SignupRequest, db=Depends(get_database)):
+async def signup(payload: SignupRequest, response: Response, request: Request, db=Depends(get_database)):
+    await auth_throttle(db, request, "signup")
     if not SECRET_KEY or len(SECRET_KEY) < 32:
         raise HTTPException(status_code=503, detail="Authentication is not configured on the server.")
     users_collection = db["users"]
@@ -90,7 +94,8 @@ async def signup(payload: SignupRequest, db=Depends(get_database)):
         )
     user_doc["_id"] = result.inserted_id
 
-    token = _create_access_token({"sub": str(result.inserted_id), "email": normalized_email})
+    await issue_refresh_cookie(db, response, user_doc)
+    token = _create_access_token({"sub": str(result.inserted_id), "email": normalized_email, "ver": 0})
 
     return {
         "success": True,
@@ -101,7 +106,8 @@ async def signup(payload: SignupRequest, db=Depends(get_database)):
 
 
 @router.post("/login")
-async def login(payload: LoginRequest, db=Depends(get_database)):
+async def login(payload: LoginRequest, response: Response, request: Request, db=Depends(get_database)):
+    await auth_throttle(db, request, "login")
     if not SECRET_KEY or len(SECRET_KEY) < 32:
         raise HTTPException(status_code=503, detail="Authentication is not configured on the server.")
     users_collection = db["users"]
@@ -114,7 +120,13 @@ async def login(payload: LoginRequest, db=Depends(get_database)):
             content={"success": False, "message": "Invalid email or password"},
         )
 
-    token = _create_access_token({"sub": str(user["_id"]), "email": normalized_email})
+    if user.get("deleting"):
+        await db["sessions"].delete_many({"userId": str(user["_id"])})
+        await db["refresh_tokens"].delete_many({"userId": str(user["_id"])})
+        await users_collection.delete_many({"_id": user["_id"]})
+        raise HTTPException(401, "Account deletion completed.")
+    await issue_refresh_cookie(db, response, user)
+    token = _create_access_token({"sub": str(user["_id"]), "email": normalized_email, "ver": user.get("tokenVersion", 0)})
 
     return {
         "success": True,
